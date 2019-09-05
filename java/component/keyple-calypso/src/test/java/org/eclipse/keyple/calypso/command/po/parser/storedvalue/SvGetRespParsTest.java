@@ -11,7 +11,6 @@
  ********************************************************************************/
 package org.eclipse.keyple.calypso.command.po.parser.storedvalue;
 
-import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.eclipse.keyple.core.seproxy.message.ApduResponse;
 import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.junit.Assert;
@@ -25,7 +24,7 @@ public class SvGetRespParsTest {
     @Test(expected = IllegalStateException.class)
     public void badLength() {
         ApduResponse apduResponse = new ApduResponse(ByteArrayUtil.fromHex("0011 9000"), null);
-        AbstractApduResponseParser apduResponseParser = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
     }
 
     @Test

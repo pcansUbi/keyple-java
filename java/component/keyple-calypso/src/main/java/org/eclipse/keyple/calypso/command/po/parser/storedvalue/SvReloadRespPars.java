@@ -18,12 +18,14 @@ import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.eclipse.keyple.core.seproxy.message.ApduResponse;
 
 /**
- * SV Debit (00BA) response parser. See specs: Calypso Stored Value balance (signed binaries' coding
- * based on the two's complement method)
+ * SV Reload (00B8) response parser. See specs: Calypso Stored Value balance (signed binaries'
+ * coding based on the two's complement method)
  * 
  * <p>
  * balance - 3 bytes signed binary - Integer from -8,388,608 to 8,388,607
- * 
+ * <p>
+ * amount for reload, 3 bytes signed binary - Integer from -8,388,608 to 8,388,607
+ *
  * <pre>
     -8,388,608           %10000000.00000000.00000000
     -8,388,607           %10000000.00000000.00000001
@@ -42,22 +44,8 @@ import org.eclipse.keyple.core.seproxy.message.ApduResponse;
      8,388,607           %01111111.11111111.11111111
  * </pre>
  * 
- * amount - 2 bytes signed binary
- * <p>
- * amount for debit - Integer 0..32767 =&gt; for negative value
- * 
- * <pre>
-        -32767           %10000000.00000001
-        -32766           %10000000.00000010
-            -3           %11111111.11111101
-            -2           %11111111.11111110
-            -1           %11111111.11111111
-             0           %00000000.00000000
-
-    Notice: -32768 (%10000000.00000000) is not allowed.
- * </pre>
  */
-public final class SvDebitRespPars extends AbstractPoResponseParser {
+public final class SvReloadRespPars extends AbstractPoResponseParser {
 
     private static final Map<Integer, StatusProperties> STATUS_TABLE;
 
@@ -81,10 +69,10 @@ public final class SvDebitRespPars extends AbstractPoResponseParser {
      *
      * @param response response to parse
      */
-    public SvDebitRespPars(ApduResponse response) {
+    public SvReloadRespPars(ApduResponse response) {
         super(response);
         if (response.getDataOut().length != 3 && response.getDataOut().length != 6) {
-            throw new IllegalStateException("Bad length in response to SV Debit command.");
+            throw new IllegalStateException("Bad length in response to SV Reload command.");
         }
     }
 
@@ -99,6 +87,6 @@ public final class SvDebitRespPars extends AbstractPoResponseParser {
 
     @Override
     public String toString() {
-        return String.format("SV Debit");
+        return String.format("SV Reload");
     }
 }

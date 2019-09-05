@@ -14,27 +14,28 @@ package org.eclipse.keyple.calypso.command.po.builder.storedvalue;
 
 import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.*;
-import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvDebitRespPars;
+import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvReloadRespPars;
 import org.eclipse.keyple.core.seproxy.message.ApduResponse;
 
 /**
- * The Class SvDebitCmdBuild. This class provides the dedicated constructor to build the SV Debit
+ * The Class SvReloadCmdBuild. This class provides the dedicated constructor to build the SV Reload
  * command.
  */
-public final class SvDebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRespPars>
+public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRespPars>
         implements PoSendableInSession, PoModificationCommand {
 
     /** The command. */
-    private static final CalypsoPoCommands command = CalypsoPoCommands.SV_DEBIT;
+    private static final CalypsoPoCommands command = CalypsoPoCommands.SV_RELOAD;
 
     /**
-     * Instantiates a new SvDebitCmdBuild.
+     * Instantiates a new SvReloadCmdBuild.
      *
      * @param poClass indicates which CLA byte should be used for the Apdu
      * @param poRevision the PO revision
-     * @param amount amount to debit (positive integer from 0 to 32767)
+     * @param amount amount to debit (signed integer from -8388608 to 8388607)
      * @param date debit date (not checked by the PO)
      * @param time debit time (not checked by the PO)
+     * @param free 2 free bytes stored in the log but not processed by the PO
      * @param challenge challenge from the debit SAM
      * @param KVC debit key KVC (not checked by the PO)
      * @param samId debit SAM serial number (not checked by the PO)
@@ -43,14 +44,14 @@ public final class SvDebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRespP
      * @param extraInfo extra information included in the logs (can be null or empty)
      * @throws IllegalArgumentException - if the command is inconsistent
      */
-    public SvDebitCmdBuild(PoClass poClass, PoRevision poRevision, int amount, byte[] date,
-            byte[] time, byte[] challenge, byte KVC, byte[] samId, byte[] samTNum,
+    public SvReloadCmdBuild(PoClass poClass, PoRevision poRevision, int amount, byte[] date,
+            byte[] time, byte[] free, byte[] challenge, byte KVC, byte[] samId, byte[] samTNum,
             byte[] signatureHi, String extraInfo) {
         super(command, null);
 
-        if (amount < 0 || amount > 32767) {
+        if (amount < -8388608 || amount > 8388607) {
             throw new IllegalArgumentException(
-                    "Amount is outside allowed boundaries (0 <= amount <= 32767)");
+                    "Amount is outside allowed boundaries (-8388608 <= amount <=  8388607)");
         }
 
         if ((poRevision == PoRevision.REV3_2 && signatureHi.length != 10)
@@ -58,25 +59,31 @@ public final class SvDebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRespP
             throw new IllegalArgumentException("Bad signture length.");
         }
 
+        if (free == null) {
+            free = new byte[] {(byte) 0x00, (byte) 0x00};
+        }
+
         byte cla = poClass.getValue();
         byte p1 = challenge[0];
         byte p2 = challenge[1];
 
         // handle the dataIn size with signatureHi length (the only varying field)
-        byte[] dataIn = new byte[15 + signatureHi.length];
+        byte[] dataIn = new byte[18 + signatureHi.length];
 
         dataIn[0] = challenge[2];
-        short amountShort = (short) -amount;
-        dataIn[1] = (byte) ((amountShort >> 8) & 0xFF);
-        dataIn[2] = (byte) (amountShort & 0xFF);
-        dataIn[3] = date[0];
-        dataIn[4] = date[1];
-        dataIn[5] = time[0];
-        dataIn[6] = time[1];
-        dataIn[7] = KVC;
-        System.arraycopy(samId, 0, dataIn, 8, 4);
-        System.arraycopy(samTNum, 0, dataIn, 12, 3);
-        System.arraycopy(signatureHi, 0, dataIn, 15, signatureHi.length);
+        dataIn[1] = date[0];
+        dataIn[2] = date[1];
+        dataIn[3] = free[0];
+        dataIn[4] = KVC;
+        dataIn[5] = free[1];
+        dataIn[6] = (byte) ((amount >> 16) & 0xFF);
+        dataIn[7] = (byte) ((amount >> 8) & 0xFF);
+        dataIn[8] = (byte) (amount & 0xFF);
+        dataIn[9] = time[0];
+        dataIn[10] = time[1];
+        System.arraycopy(samId, 0, dataIn, 11, 4);
+        System.arraycopy(samTNum, 0, dataIn, 15, 3);
+        System.arraycopy(signatureHi, 0, dataIn, 18, signatureHi.length);
 
         this.request = setApduRequest(cla, command, p1, p2, dataIn, null);
         if (extraInfo != null) {
@@ -85,7 +92,7 @@ public final class SvDebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRespP
     }
 
     @Override
-    public SvDebitRespPars createResponseParser(ApduResponse apduResponse) {
-        return new SvDebitRespPars(apduResponse);
+    public SvReloadRespPars createResponseParser(ApduResponse apduResponse) {
+        return new SvReloadRespPars(apduResponse);
     }
 }
