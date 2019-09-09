@@ -11,63 +11,48 @@
  ********************************************************************************/
 package org.eclipse.keyple.calypso.command.sam;
 
-import org.eclipse.keyple.calypso.command.sam.builder.security.*;
-import org.eclipse.keyple.calypso.command.sam.builder.security.SelectDiversifierCmdBuild;
-import org.eclipse.keyple.calypso.command.sam.parser.security.*;
-import org.eclipse.keyple.calypso.command.sam.parser.security.SelectDiversifierRespPars;
-import org.eclipse.keyple.core.command.AbstractApduCommandBuilder;
-import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.eclipse.keyple.core.command.CommandsTable;
 
 public enum CalypsoSamCommands implements CommandsTable {
 
     /** The sam select diversifier. */
-    SELECT_DIVERSIFIER("Select Diversifier", (byte) 0x14, SelectDiversifierCmdBuild.class,
-            SelectDiversifierRespPars.class),
+    SELECT_DIVERSIFIER("Select Diversifier", (byte) 0x14),
 
     /** The sam get challenge. */
-    GET_CHALLENGE("Get Challenge", (byte) 0x84, SamGetChallengeCmdBuild.class,
-            SamGetChallengeRespPars.class),
+    GET_CHALLENGE("Get Challenge", (byte) 0x84),
 
     /** The sam digest init. */
-    DIGEST_INIT("Digest Init", (byte) 0x8A, DigestInitCmdBuild.class, DigestInitRespPars.class),
+    DIGEST_INIT("Digest Init", (byte) 0x8A),
 
     /** The sam digest update. */
-    DIGEST_UPDATE("Digest Update", (byte) 0x8C, DigestUpdateCmdBuild.class,
-            DigestUpdateRespPars.class),
+    DIGEST_UPDATE("Digest Update", (byte) 0x8C),
 
     /** The sam digest update multiple. */
-    DIGEST_UPDATE_MULTIPLE("Digest Update Multiple", (byte) 0x8C,
-            DigestUpdateMultipleCmdBuild.class, DigestUpdateMultipleRespPars.class),
+    DIGEST_UPDATE_MULTIPLE("Digest Update Multiple", (byte) 0x8C),
 
     /** The sam digest close. */
-    DIGEST_CLOSE("Digest Close", (byte) 0x8E, DigestCloseCmdBuild.class, DigestCloseRespPars.class),
+    DIGEST_CLOSE("Digest Close", (byte) 0x8E),
 
     /** The sam digest authenticate. */
-    DIGEST_AUTHENTICATE("Digest Authenticate", (byte) 0x82, DigestAuthenticateCmdBuild.class,
-            DigestAuthenticateRespPars.class),
+    DIGEST_AUTHENTICATE("Digest Authenticate", (byte) 0x82),
 
     /** The sam digest authenticate. */
-    GIVE_RANDOM("Give Random", (byte) 0x86, GiveRandomCmdBuild.class, GiveRandomRespPars.class),
+    GIVE_RANDOM("Give Random", (byte) 0x86),
 
     /** The sam digest authenticate. */
-    CARD_GENERATE_KEY("Card Generate Key", (byte) 0x12, CardGenerateKeyCmdBuild.class,
-            CardGenerateKeyRespPars.class),
+    CARD_GENERATE_KEY("Card Generate Key", (byte) 0x12),
 
     /** The sam unlock. */
-    UNLOCK("Unlock", (byte) 0x20, UnlockCmdBuild.class, UnlockRespPars.class),
+    UNLOCK("Unlock", (byte) 0x20),
 
     /** The sam write key command. */
-    WRITE_KEY("Write Key", (byte) 0x1A, SamWriteKeyCmdBuild.class, SamWriteKeyRespPars.class),
+    WRITE_KEY("Write Key", (byte) 0x1A),
 
-    READ_KEY_PARAMETERS("Read Key Parameters", (byte) 0xBC, SamReadKeyParametersCmdBuild.class,
-            SamReadKeyParametersRespPars.class),
+    READ_KEY_PARAMETERS("Read Key Parameters", (byte) 0xBC),
 
-    READ_EVENT_COUNTER("Read Event Counter", (byte) 0xBE, SamReadEventCounterCmdBuild.class,
-            SamReadEventCounterRespPars.class),
+    READ_EVENT_COUNTER("Read Event Counter", (byte) 0xBE),
 
-    READ_CEILINGS("Read Ceilings", (byte) 0xBE, SamReadCeilingsCmdBuild.class,
-            SamReadCeilingsRespPars.class);
+    READ_CEILINGS("Read Ceilings", (byte) 0xBE);
 
     /** The name. */
     private final String name;
@@ -75,27 +60,15 @@ public enum CalypsoSamCommands implements CommandsTable {
     /** The instruction byte. */
     private final byte instructionbyte;
 
-    /** The command builder class. */
-    private final Class<? extends AbstractApduCommandBuilder> commandBuilderClass;
-
-    /** The response parser class. */
-    private final Class<? extends AbstractApduResponseParser> responseParserClass;
-
     /**
      * The generic constructor of CalypsoCommands.
      *
      * @param name the name
      * @param instructionByte the instruction byte
-     * @param commandBuilderClass the command builder class
-     * @param responseParserClass the response parser class
      */
-    CalypsoSamCommands(String name, byte instructionByte,
-            Class<? extends AbstractApduCommandBuilder> commandBuilderClass,
-            Class<? extends AbstractApduResponseParser> responseParserClass) {
+    CalypsoSamCommands(String name, byte instructionByte) {
         this.name = name;
         this.instructionbyte = instructionByte;
-        this.commandBuilderClass = commandBuilderClass;
-        this.responseParserClass = responseParserClass;
     }
 
     /**
@@ -114,23 +87,5 @@ public enum CalypsoSamCommands implements CommandsTable {
      */
     public byte getInstructionByte() {
         return instructionbyte;
-    }
-
-    /**
-     * Gets the command builder class.
-     *
-     * @return the corresponding command builder class
-     */
-    public Class<? extends AbstractApduCommandBuilder> getCommandBuilderClass() {
-        return commandBuilderClass;
-    }
-
-    /**
-     * Gets the response parser class.
-     *
-     * @return the corresponding response parser class
-     */
-    public Class<? extends AbstractApduResponseParser> getResponseParserClass() {
-        return responseParserClass;
     }
 }
