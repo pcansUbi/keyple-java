@@ -200,7 +200,14 @@ uploadArchives  {
 
 repositories {
     mavenLocal()
-    mavenCentral()
+    maven {
+        url 'https://repo.eclipse.org/service/local/repositories/maven_central/content'
+    }
+    //to import keyple snapshots
+    maven {url 'https://oss.sonatype.org/content/repositories/snapshots' }
+    //to import keyple releases
+    maven { url 'https://oss.sonatype.org/content/repositories/releases' }
+    //mavenCentral()
     google()
     jcenter()
 }
@@ -209,7 +216,7 @@ dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
 
     //keyple-core project
-    implementation group: 'org.eclipse.keyple', name: 'keyple-java-core', version: project.version
+    implementation group: 'org.eclipse.keyple', name: 'keyple-java-core', version: '+'
 
     //android
     implementation "com.android.support:support-v4:${android_support_version}"
