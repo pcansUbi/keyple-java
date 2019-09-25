@@ -31,7 +31,7 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
- * Rest client, polls server, based on client_retrofit and callbacks
+ * Observable polling client Rest client, polls server, based on client_retrofit and callbacks
  */
 public class WsPRetrofitClientImpl extends Observable implements ClientNode {
 
@@ -85,7 +85,7 @@ public class WsPRetrofitClientImpl extends Observable implements ClientNode {
                     if (!isPolling) {
                         logger.trace("Polling state changed, polling is ON now");
                         setChanged();
-                        notifyObservers(true);
+                        notifyObservers(new Boolean(true));
                         isPolling = true;
                     }
 
@@ -112,12 +112,11 @@ public class WsPRetrofitClientImpl extends Observable implements ClientNode {
                 public void onFailure(Call<KeypleDto> call, Throwable t) {
                     logger.trace("Receive exception : {} , {}", t.getMessage(), t.getClass());
 
-                    if (isPolling) {
-                        logger.trace("Polling state changed, polling is OFF now");
-                        setChanged();
-                        notifyObservers(false);
-                        isPolling = false;
-                    }
+                    logger.trace("Polling failed, polling is OFF");
+                    setChanged();
+                    notifyObservers(new Boolean(false));
+                    isPolling = false;
+
                     // Log error here since request failed
                     if (t instanceof ConnectException) {
                         logger.error("Connection refused to server : {} , {}", t.getMessage(),
