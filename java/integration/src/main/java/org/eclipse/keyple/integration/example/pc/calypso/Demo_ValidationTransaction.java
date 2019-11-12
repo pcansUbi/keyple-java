@@ -465,6 +465,8 @@ public class Demo_ValidationTransaction implements ObservableReader.ReaderObserv
 
         // Set terminal as Observer of the first reader
         ((ObservableReader) poReader).addObserver(observer);
+        // start detection in repeating mode
+        ((ObservableReader) poReader).startSeDetection(ObservableReader.PollingMode.REPEATING);
         synchronized (waitForEnd) {
             waitForEnd.wait();
         }
