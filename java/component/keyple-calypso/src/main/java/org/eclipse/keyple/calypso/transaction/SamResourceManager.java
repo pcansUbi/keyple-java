@@ -47,7 +47,24 @@ public class SamResourceManager {
     private final boolean dynamicAllocationPlugin;
 
     /**
-     * Instantiate a new SamResourceManager.
+     * Instantiate a new SamResourceManager with a ReaderPoolPlugin (e.g. HSM plugin).
+     * <p>
+     * The samReaderPlugin is used to retrieve the available SAM according to the provided filter.
+     * <p>
+     * @param samReaderPoolPlugin the plugin through which SAM readers are accessible
+     * @param samReaderFilter the regular expression defining how to identify SAM readers among
+     *        others.
+     */
+    public SamResourceManager(ReaderPoolPlugin samReaderPoolPlugin, String samReaderFilter) {
+        this.samReaderPlugin = samReaderPoolPlugin;
+        logger.info("Create SAM resource manager from reader pool plugin: {}",
+                samReaderPoolPlugin.getName());
+        // HSM reader plugin type
+        dynamicAllocationPlugin = true;
+    }
+
+    /**
+     * Instantiate a new SamResourceManager with ReaderPlugin (e.g. PC/SC plugin).
      * <p>
      * The samReaderPlugin is used to retrieve the available SAM according to the provided filter.
      * <p>
@@ -61,37 +78,30 @@ public class SamResourceManager {
     public SamResourceManager(ReaderPlugin samReaderPlugin, String samReaderFilter)
             throws KeypleReaderException {
         this.samReaderPlugin = samReaderPlugin;
-        if (samReaderPlugin instanceof ReaderPoolPlugin) {
-            logger.info("Create SAM resource manager from reader pool plugin: {}",
-                    samReaderPlugin.getName());
-            // HSM reader plugin type
-            dynamicAllocationPlugin = true;
-        } else {
-            logger.info("Create SAM resource manager from reader plugin: {}",
-                    samReaderPlugin.getName());
-            // Local readers plugin type
-            dynamicAllocationPlugin = false;
+        logger.info("Create SAM resource manager from reader plugin: {}",
+                samReaderPlugin.getName());
+        // Local readers plugin type
+        dynamicAllocationPlugin = false;
 
-            if (samReaderPlugin instanceof ObservablePlugin) {
-                // add an observer to monitor reader and SAM insertions
-                ReaderObserver readerObserver = new ReaderObserver();
-                PluginObserver pluginObserver = new PluginObserver(readerObserver, samReaderFilter);
-                logger.info("Add observer PLUGINNAME = {}", samReaderPlugin.getName());
-                ((ObservablePlugin) samReaderPlugin).addObserver(pluginObserver);
-            } else {
-                // the plugin isn't observable, just add resources from the current readers if any
-                logger.info("PLUGINNAME = {} isn't observable. Add available readers.",
-                        samReaderPlugin.getName());
-                SortedSet<? extends SeReader> samReaders = samReaderPlugin.getReaders();
-                for (SeReader samReader : samReaders) {
-                    String readerName = samReader.getName();
-                    Pattern p = Pattern.compile(samReaderFilter);
-                    if (p.matcher(readerName).matches()) {
-                        logger.debug("Add reader: {}", readerName);
-                        localSamResources.add(createSamResource(samReader));
-                    } else {
-                        logger.debug("Reader not matching: {}", readerName);
-                    }
+        if (samReaderPlugin instanceof ObservablePlugin) {
+            // add an observer to monitor reader and SAM insertions
+            ReaderObserver readerObserver = new ReaderObserver();
+            PluginObserver pluginObserver = new PluginObserver(readerObserver, samReaderFilter);
+            logger.info("Add observer PLUGINNAME = {}", samReaderPlugin.getName());
+            ((ObservablePlugin) samReaderPlugin).addObserver(pluginObserver);
+        } else {
+            // the plugin isn't observable, just add resources from the current readers if any
+            logger.info("PLUGINNAME = {} isn't observable. Add available readers.",
+                    samReaderPlugin.getName());
+            SortedSet<? extends SeReader> samReaders = samReaderPlugin.getReaders();
+            for (SeReader samReader : samReaders) {
+                String readerName = samReader.getName();
+                Pattern p = Pattern.compile(samReaderFilter);
+                if (p.matcher(readerName).matches()) {
+                    logger.debug("Add reader: {}", readerName);
+                    localSamResources.add(createSamResource(samReader));
+                } else {
+                    logger.debug("Reader not matching: {}", readerName);
                 }
             }
         }
@@ -306,6 +316,7 @@ public class SamResourceManager {
                             if (samReader instanceof ObservableReader && readerObserver != null) {
                                 logger.info("Add observer READERNAME = {}", samReader.getName());
                                 ((ObservableReader) samReader).addObserver(readerObserver);
+                                ((ObservableReader) samReader).startSeDetection(ObservableReader.PollingMode.REPEATING);
                             } else {
                                 logger.info("No observer to add READERNAME = {}",
                                         samReader.getName());
