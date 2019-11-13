@@ -22,12 +22,10 @@ import org.eclipse.keyple.core.seproxy.event.ObservableReader;
 import org.eclipse.keyple.core.seproxy.event.ReaderEvent;
 import org.eclipse.keyple.core.seproxy.exception.KeypleReaderException;
 import org.eclipse.keyple.core.seproxy.exception.KeypleReaderNotFoundException;
-import org.eclipse.keyple.core.seproxy.message.ProxyReader;
-import org.eclipse.keyple.core.seproxy.plugin.AbstractReader;
 import org.eclipse.keyple.plugin.remotese.exception.KeypleRemoteException;
 import org.eclipse.keyple.plugin.remotese.nativese.method.*;
-import org.eclipse.keyple.plugin.remotese.rm.RemoteMethod;
-import org.eclipse.keyple.plugin.remotese.rm.RemoteMethodExecutor;
+import org.eclipse.keyple.plugin.remotese.rm.IRemoteMethodExecutor;
+import org.eclipse.keyple.plugin.remotese.rm.RemoteMethodName;
 import org.eclipse.keyple.plugin.remotese.rm.RemoteMethodTxEngine;
 import org.eclipse.keyple.plugin.remotese.transport.*;
 import org.eclipse.keyple.plugin.remotese.transport.json.JsonParser;
@@ -38,8 +36,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+
 /**
- * SlaveAPI to manage local reader and connect them to Remote Service
+ * SlaveAPI is the main component of the Remote Se Architecture on the slave side.
+ * <p>
+ * It allows also to connect/disconnect a reader trhough dedicated methods
+ * <p>
+ * It handles incoming {@link KeypleDto} and transfer them to the right {@link SeReader}
+ * <p>
+ * Configure the SlaveAPI with a {@link DtoNode} to enable communication with the
+ * {@link org.eclipse.keyple.plugin.remotese.pluginse.MasterAPI}
  *
  */
 public class SlaveAPI implements INativeReaderService, DtoHandler, ObservableReader.ReaderObserver {
@@ -101,7 +107,8 @@ public class SlaveAPI implements INativeReaderService, DtoHandler, ObservableRea
     }
 
     /**
-     * Dispatch a Keyple DTO to the right Native Reader. {@link DtoHandler}
+     * Process and dispatch a {@link KeypleDto} to the right Native Reader. Override from the
+     * interface {@link DtoHandler}
      * 
      * @param transportDto to be processed
      * @return Keyple DTO to be sent back
@@ -114,7 +121,7 @@ public class SlaveAPI implements INativeReaderService, DtoHandler, ObservableRea
 
         logger.trace("{} onDto {}", dtoNode.getNodeId(), KeypleDtoHelper.toJson(keypleDTO));
 
-        RemoteMethod method = RemoteMethod.get(keypleDTO.getAction());
+        RemoteMethodName method = RemoteMethodName.get(keypleDTO.getAction());
         logger.debug("{} Remote Method called : {} - isRequest : {}", dtoNode.getNodeId(), method,
                 keypleDTO.isRequest());
 
@@ -140,7 +147,7 @@ public class SlaveAPI implements INativeReaderService, DtoHandler, ObservableRea
             case READER_TRANSMIT:
                 // must be a request
                 if (keypleDTO.isRequest()) {
-                    RemoteMethodExecutor rmTransmit = new RmTransmitExecutor(this);
+                    IRemoteMethodExecutor rmTransmit = new RmTransmitExecutor(this);
                     out = rmTransmit.execute(transportDto);
                 } else {
                     throw new IllegalStateException(
@@ -151,7 +158,7 @@ public class SlaveAPI implements INativeReaderService, DtoHandler, ObservableRea
             case READER_TRANSMIT_SET:
                 // must be a request
                 if (keypleDTO.isRequest()) {
-                    RemoteMethodExecutor rmTransmitSet = new RmTransmitSetExecutor(this);
+                    IRemoteMethodExecutor rmTransmitSet = new RmTransmitSetExecutor(this);
                     out = rmTransmitSet.execute(transportDto);
                 } else {
                     throw new IllegalStateException(
@@ -218,7 +225,8 @@ public class SlaveAPI implements INativeReaderService, DtoHandler, ObservableRea
      */
 
     /**
-     * Connect a local reader to Remote SE Plugin {@link INativeReaderService}
+     * Connect a local reader to Remote SE Plugin. Override from interface
+     * {@link INativeReaderService}
      *
      * @param localReader : native reader to be connected
      * @return sessionId : if successful returns sessionId
@@ -230,8 +238,9 @@ public class SlaveAPI implements INativeReaderService, DtoHandler, ObservableRea
     }
 
     /**
-     * Connect a local reader to Remote SE Plugin {@link INativeReaderService} with options
-     *
+     * Connect a local reader to Remote SE Plugin with options Override from interface
+     * {@link INativeReaderService}
+     * 
      * @param localReader : native reader to be connected
      * @param options : options will be set as parameters of virtual reader
      */
@@ -249,16 +258,22 @@ public class SlaveAPI implements INativeReaderService, DtoHandler, ObservableRea
         RmConnectReaderTx connect = new RmConnectReaderTx(null, localReader.getName(), null,
                 masterNodeId, localReader, dtoNode.getNodeId(), this, options);
         try {
-            rmTxEngine.add(connect);
-
             // blocking call
-            return connect.getResponse();
+            return connect.execute(rmTxEngine);
         } catch (KeypleRemoteException e) {
             throw new KeypleReaderException("An error occurred while calling connectReader", e);
         }
 
     }
 
+    /**
+     * Disconnect a SeReader. Matching virtual session will be destroyed on Master node.
+     * 
+     * @param sessionId (optional)
+     * @param nativeReaderName local name of the reader, will be used coupled with the nodeId to
+     *        identify the virtualReader
+     * @throws KeypleReaderException
+     */
     @Override
     public void disconnectReader(String sessionId, String nativeReaderName)
             throws KeypleReaderException {
@@ -269,16 +284,14 @@ public class SlaveAPI implements INativeReaderService, DtoHandler, ObservableRea
                 dtoNode.getNodeId(), masterNodeId);
 
         try {
-            rmTxEngine.add(disconnect);
-
             // blocking call
-            disconnect.getResponse();
-            ProxyReader nativeReader = findLocalReader(nativeReaderName);
-            if (nativeReader instanceof AbstractReader) {
+            disconnect.execute(rmTxEngine);
+            SeReader nativeReader = findLocalReader(nativeReaderName);
+            if (nativeReader instanceof ObservableReader) {
                 logger.debug("Disconnected reader is observable, removing slaveAPI observer");
 
                 // stop propagating the local reader events
-                ((AbstractReader) nativeReader).removeObserver(this);
+                ((ObservableReader) nativeReader).removeObserver(this);
             } else {
                 logger.debug("Disconnected reader is not observable");
             }
@@ -294,17 +307,16 @@ public class SlaveAPI implements INativeReaderService, DtoHandler, ObservableRea
      * Internal method to find a local reader by its name across multiple plugins
      * 
      * @param nativeReaderName : name of the reader to be found
-     * @return found reader if any
+     * @return Se Reader found if any
      * @throws KeypleReaderNotFoundException if not reader were found with this name
      */
     @Override
-    public ProxyReader findLocalReader(String nativeReaderName)
-            throws KeypleReaderNotFoundException {
+    public SeReader findLocalReader(String nativeReaderName) throws KeypleReaderNotFoundException {
         logger.trace("Find local reader by name {} in {} plugin(s)", nativeReaderName,
                 seProxyService.getPlugins().size());
         for (ReaderPlugin plugin : seProxyService.getPlugins()) {
             try {
-                return (ProxyReader) plugin.getReader(nativeReaderName);
+                return plugin.getReader(nativeReaderName);
             } catch (KeypleReaderNotFoundException e) {
                 // continue
             }
@@ -326,9 +338,9 @@ public class SlaveAPI implements INativeReaderService, DtoHandler, ObservableRea
         String data = JsonParser.getGson().toJson(event);
 
         try {
-            dtoNode.sendDTO(KeypleDtoHelper.buildNotification(RemoteMethod.READER_EVENT.getName(),
-                    data, null, event.getReaderName(), null, this.dtoNode.getNodeId(),
-                    masterNodeId));
+            dtoNode.sendDTO(KeypleDtoHelper.buildNotification(
+                    RemoteMethodName.READER_EVENT.getName(), data, null, event.getReaderName(),
+                    null, this.dtoNode.getNodeId(), masterNodeId));
         } catch (KeypleRemoteException e) {
             logger.error("Event " + event.toString()
                     + " could not be sent though Remote Service Interface", e);
