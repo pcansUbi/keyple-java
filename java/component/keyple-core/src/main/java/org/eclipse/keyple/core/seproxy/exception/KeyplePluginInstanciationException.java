@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (c) 2018 Calypso Networks Association https://www.calypsonet-asso.org/
+ * Copyright (c) 2019 Calypso Networks Association https://www.calypsonet-asso.org/
  *
  * See the NOTICE file(s) distributed with this work for additional information regarding copyright
  * ownership.
@@ -9,19 +9,16 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  ********************************************************************************/
-package org.eclipse.keyple.core.seproxy;
+package org.eclipse.keyple.core.seproxy.exception;
 
-/**
- * indicates the action to be operated on the physical channel at the end of the request
- * transmission.
- */
-public enum ChannelControl {
-    /**
-     * lefts the physical channel open
-     */
-    KEEP_OPEN,
-    /**
-     * closes the physical channel
-     */
-    CLOSE_AFTER
+public class KeyplePluginInstanciationException extends KeypleBaseException {
+
+
+    public KeyplePluginInstanciationException(String message) {
+        super(message);
+    }
+
+    public KeyplePluginInstanciationException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

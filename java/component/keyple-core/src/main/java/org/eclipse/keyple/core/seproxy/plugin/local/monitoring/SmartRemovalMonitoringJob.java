@@ -20,7 +20,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Detect the SE removal thanks to the method {@link SmartRemovalReader#waitForCardAbsentNative()}
+ * Detect the SE removal thanks to the method {@link SmartRemovalReader#waitForCardAbsentNative()}.
+ * This method is invoked in another thread
+ * <p>
+ * This job should be used by readers who have the ability to natively detect the disappearance of
+ * the SE during a communication session with an ES (between two APDU exchanges).
+ * <p>
+ * PC/SC readers have this capability.
+ * <p>
+ * If the SE is removed during processing, then an internal SE_REMOVED event is triggered.
+ * <p>
+ * If a communication problem with the reader occurs (KeypleIOReaderException) an internal
+ * STOP_DETECT event is fired.
  */
 public class SmartRemovalMonitoringJob implements MonitoringJob {
 
@@ -34,6 +45,9 @@ public class SmartRemovalMonitoringJob implements MonitoringJob {
 
     @Override
     public Runnable getMonitoringJob(final AbstractObservableState state) {
+        /**
+         * Invoke the method SmartRemovalReader#waitForCardAbsentNative() in another thread
+         */
         return new Runnable() {
             @Override
             public void run() {
@@ -50,7 +64,7 @@ public class SmartRemovalMonitoringJob implements MonitoringJob {
                     }
                 } catch (KeypleIOReaderException e) {
                     logger.trace(
-                            "[{}] waitForCardAbsent => Error while polling card with waitForCardAbsent",
+                            "[{}] waitForCardAbsent => Error while polling SE with waitForCardAbsent",
                             reader.getName());
                     state.onEvent(AbstractObservableLocalReader.InternalEvent.STOP_DETECT);
                 }

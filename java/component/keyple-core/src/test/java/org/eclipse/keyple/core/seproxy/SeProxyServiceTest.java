@@ -12,6 +12,7 @@
 package org.eclipse.keyple.core.seproxy;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -19,8 +20,10 @@ import java.util.SortedSet;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.eclipse.keyple.core.seproxy.exception.KeyplePluginInstanciationException;
 import org.eclipse.keyple.core.seproxy.exception.KeyplePluginNotFoundException;
 import org.eclipse.keyple.core.seproxy.plugin.AbstractPlugin;
+import org.eclipse.keyple.core.seproxy.plugin.mock.MockAbstractThreadedPlugin;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,7 +58,7 @@ public class SeProxyServiceTest {
     static String PLUGIN_NAME_2 = "plugin2";
 
     @Before
-    public void setupBeforeEach() {
+    public void setupBeforeEach() throws KeyplePluginInstanciationException {
 
         // init class to test
         proxyService = SeProxyService.getInstance();
@@ -81,15 +84,19 @@ public class SeProxyServiceTest {
         assertTrue(version.matches(regex));
     }
 
-    /*
-     * @Test public void testGetSetPlugins() { // init ConcurrentSkipListSet<ReaderPlugin> plugins =
-     * getPluginList();
-     * 
-     * // test proxyService.setPlugins(plugins); assertArrayEquals(plugins.toArray(),
-     * proxyService.getPlugins().toArray()); }
-     */
+    @Test(expected = KeyplePluginInstanciationException.class)
+    public void testFailingPlugin() throws KeyplePluginInstanciationException {
+
+        doThrow(new KeyplePluginInstanciationException("")).when(factory1).getPluginInstance();
+
+        proxyService.registerPlugin(factory1);
+    }
+
+
+
     @Test
-    public void testRegisterPlugin() throws KeyplePluginNotFoundException {
+    public void testRegisterPlugin()
+            throws KeyplePluginNotFoundException, KeyplePluginInstanciationException {
 
         // register plugin1 by its factory
         proxyService.registerPlugin(factory1);
@@ -109,7 +116,7 @@ public class SeProxyServiceTest {
     }
 
     @Test
-    public void testRegisterTwicePlugin() throws KeyplePluginNotFoundException {
+    public void testRegisterTwicePlugin() throws KeyplePluginInstanciationException {
 
         // register plugin1 by its factory
         proxyService.registerPlugin(factory1);
@@ -125,7 +132,7 @@ public class SeProxyServiceTest {
     }
 
     @Test
-    public void testRegisterTwoPlugins() throws KeyplePluginNotFoundException {
+    public void testRegisterTwoPlugins() throws KeyplePluginInstanciationException {
 
         // register plugin1 by its factory
         proxyService.registerPlugin(factory1);
@@ -182,7 +189,11 @@ public class SeProxyServiceTest {
                         overlaps.incrementAndGet();
                     }
                     running.set(true);
-                    proxyService.registerPlugin(factory);
+                    try {
+                        proxyService.registerPlugin(factory);
+                    } catch (KeyplePluginInstanciationException e) {
+                        e.printStackTrace();
+                    }
                     running.set(false);
 
                 }

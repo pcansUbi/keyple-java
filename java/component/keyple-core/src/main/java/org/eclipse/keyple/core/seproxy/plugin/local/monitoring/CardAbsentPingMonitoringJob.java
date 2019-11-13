@@ -19,7 +19,16 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Ping the SE to detect removal thanks to the method
- * {@link AbstractObservableLocalReader#isSePresentPing()}
+ * {@link AbstractObservableLocalReader#isSePresentPing()}. This method is invoked in another
+ * thread.
+ * <p>
+ * This job should be used by readers who do not have the ability to natively detect the
+ * disappearance of the SE at the end of the transaction.
+ * <p>
+ * It is based on sending a neutral APDU command as long as the SE is responding, an internal
+ * SE_REMOVED event is fired when the SE is no longer responding.
+ * <p>
+ * A delay of 200 ms is inserted between each APDU sending.
  */
 public class CardAbsentPingMonitoringJob implements MonitoringJob {
 
@@ -33,17 +42,26 @@ public class CardAbsentPingMonitoringJob implements MonitoringJob {
 
     @Override
     public Runnable getMonitoringJob(final AbstractObservableState state) {
+
+        /**
+         * Loop until one the following condition is met : -
+         * AbstractObservableLocalReader#isSePresentPing returns false, meaning that the SE ping has
+         * failed - InterruptedException is caught
+         */
         return new Runnable() {
             long threshold = 200;
             long retries = 0;
+            boolean loop = true;
 
             @Override
             public void run() {
                 logger.debug("[{}] Polling from isSePresentPing", reader.getName());
-                while (true) {
+                while (loop) {
                     if (!reader.isSePresentPing()) {
                         logger.debug("[{}] The SE stopped responding", reader.getName());
+                        loop = false;
                         state.onEvent(AbstractObservableLocalReader.InternalEvent.SE_REMOVED);
+                        return;
                     }
                     retries++;
 
@@ -54,6 +72,7 @@ public class CardAbsentPingMonitoringJob implements MonitoringJob {
                         // wait a bit
                         Thread.sleep(threshold);
                     } catch (InterruptedException ignored) {
+                        loop = false;
                     }
                 }
             }
