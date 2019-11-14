@@ -15,11 +15,11 @@ import java.util.*;
 import org.eclipse.keyple.core.seproxy.ChannelControl;
 import org.eclipse.keyple.core.seproxy.MultiSeRequestProcessing;
 import org.eclipse.keyple.core.seproxy.SeReader;
-import org.eclipse.keyple.core.seproxy.event.DefaultSelectionsRequest;
-import org.eclipse.keyple.core.seproxy.event.DefaultSelectionsResponse;
+import org.eclipse.keyple.core.seproxy.event.AbstractDefaultSelectionsRequest;
+import org.eclipse.keyple.core.seproxy.event.AbstractDefaultSelectionsResponse;
 import org.eclipse.keyple.core.seproxy.exception.KeypleReaderException;
 import org.eclipse.keyple.core.seproxy.message.*;
-import org.eclipse.keyple.core.seproxy.message.DefaultSelectionsResponseImpl;
+import org.eclipse.keyple.core.seproxy.message.DefaultSelectionsResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,29 +98,28 @@ public final class SeSelection {
      * @return the {@link SelectionsResult} containing the result of all prepared selection cases,
      *         including {@link AbstractMatchingSe} and {@link SeResponse}.
      */
-    private SelectionsResult processSelection(DefaultSelectionsResponse defaultSelectionsResponse) {
+    private SelectionsResult processSelection(
+            AbstractDefaultSelectionsResponse defaultSelectionsResponse) {
         SelectionsResult selectionsResult = new SelectionsResult();
 
-        int selectionIndex = 0;
+        int index = 0;
 
         /* Check SeResponses */
-        for (SeResponse seResponse : defaultSelectionsResponse.getSelectionSeResponseSet()) {
-            if (seResponse != null) {
-                /* test if the selection is successful: we should have either a FCI or an ATR */
-                if (seResponse.getSelectionStatus() != null
-                        && seResponse.getSelectionStatus().hasMatched()) {
-                    /*
-                     * create a AbstractMatchingSe with the class deduced from the selection request
-                     * during the selection preparation
-                     */
-                    AbstractMatchingSe matchingSe =
-                            seSelectionRequestList.get(selectionIndex).parse(seResponse);
+        for (SeResponse seResponse : ((DefaultSelectionsResponse) defaultSelectionsResponse)
+                .getSelectionSeResponseSet()) {
+            /* test if the selection is successful: we should have either a FCI or an ATR */
+            if (seResponse != null && seResponse.getSelectionStatus() != null
+                    && seResponse.getSelectionStatus().hasMatched()) {
+                /*
+                 * create a AbstractMatchingSe with the class deduced from the selection request
+                 * during the selection preparation
+                 */
+                AbstractMatchingSe matchingSe = seSelectionRequestList.get(index).parse(seResponse);
 
-                    selectionsResult.addMatchingSelection(new MatchingSelection(selectionIndex,
-                            seSelectionRequestList.get(selectionIndex), matchingSe, seResponse));
-                }
+                selectionsResult.addMatchingSelection(new MatchingSelection(index,
+                        seSelectionRequestList.get(index), matchingSe, seResponse));
             }
-            selectionIndex++;
+            index++;
         }
         return selectionsResult;
     }
@@ -132,12 +131,12 @@ public final class SeSelection {
      * Selection cases that have not matched the current SE are set to null.
      *
      * @param defaultSelectionsResponse the response from the reader to the
-     *        {@link DefaultSelectionsRequest}
+     *        {@link AbstractDefaultSelectionsRequest}
      * @return the {@link SelectionsResult} containing the result of all prepared selection cases,
      *         including {@link AbstractMatchingSe} and {@link SeResponse}.
      */
     public SelectionsResult processDefaultSelection(
-            DefaultSelectionsResponse defaultSelectionsResponse) {
+            AbstractDefaultSelectionsResponse defaultSelectionsResponse) {
 
         /* null pointer exception protection */
         if (defaultSelectionsResponse == null) {
@@ -147,7 +146,8 @@ public final class SeSelection {
 
         if (logger.isTraceEnabled()) {
             logger.trace("Process default SELECTIONRESPONSE ({} response(s))",
-                    defaultSelectionsResponse.getSelectionSeResponseSet().size());
+                    ((DefaultSelectionsResponse) defaultSelectionsResponse)
+                            .getSelectionSeResponseSet().size());
         }
 
         return processSelection(defaultSelectionsResponse);
@@ -180,18 +180,19 @@ public final class SeSelection {
         List<SeResponse> seResponseList = ((ProxyReader) seReader).transmitSet(selectionRequestSet,
                 multiSeRequestProcessing, channelControl);
 
-        return processSelection(new DefaultSelectionsResponseImpl(seResponseList));
+        return processSelection(new DefaultSelectionsResponse(seResponseList));
     }
 
     /**
-     * The SelectionOperation is the {@link DefaultSelectionsRequest} to process in ordered to
-     * select a SE among others through the selection process. This method is useful to build the
+     * The SelectionOperation is the {@link AbstractDefaultSelectionsRequest} to process in ordered
+     * to select a SE among others through the selection process. This method is useful to build the
      * prepared selection to be executed by a reader just after a SE insertion.
      * 
-     * @return the {@link DefaultSelectionsRequest} previously prepared with prepareSelection
+     * @return the {@link AbstractDefaultSelectionsRequest} previously prepared with
+     *         prepareSelection
      */
-    public DefaultSelectionsRequest getSelectionOperation() {
-        return new DefaultSelectionsRequestImpl(selectionRequestSet, multiSeRequestProcessing,
+    public AbstractDefaultSelectionsRequest getSelectionOperation() {
+        return new DefaultSelectionsRequest(selectionRequestSet, multiSeRequestProcessing,
                 channelControl);
     }
 }
