@@ -41,7 +41,7 @@ public class SamResourceManager {
     }
 
     /* the maximum time (in tenths of a second) during which the BLOCKING mode will wait */
-    private final static int MAX_BLOCKING_TIME = 1000; // 10 sec
+    private static final int MAX_BLOCKING_TIME = 1000; // 10 sec
     private final ReaderPlugin samReaderPlugin;
     private final List<SamResource> localSamResources = new ArrayList<SamResource>();
     private final boolean dynamicAllocationPlugin;
@@ -51,6 +51,7 @@ public class SamResourceManager {
      * <p>
      * The samReaderPlugin is used to retrieve the available SAM according to the provided filter.
      * <p>
+     * 
      * @param samReaderPoolPlugin the plugin through which SAM readers are accessible
      * @param samReaderFilter the regular expression defining how to identify SAM readers among
      *        others.
@@ -173,13 +174,11 @@ public class SamResourceManager {
             } else {
                 synchronized (localSamResources) {
                     for (SamResource samResource : localSamResources) {
-                        if (samResource.isSamResourceFree()) {
-                            if (samResource.isSamMatching(samIdentifier)) {
-                                samResource
-                                        .setSamResourceStatus(SamResource.SamResourceStatus.BUSY);
-                                logger.debug("Allocation succeeded. SAM resource created.");
-                                return samResource;
-                            }
+                        if (samResource.isSamResourceFree()
+                                && samResource.isSamMatching(samIdentifier)) {
+                            samResource.setSamResourceStatus(SamResource.SamResourceStatus.BUSY);
+                            logger.debug("Allocation succeeded. SAM resource created.");
+                            return samResource;
                         }
                     }
                 }
@@ -282,13 +281,11 @@ public class SamResourceManager {
 
                 /* We retrieve the reader object from its name. */
                 try {
-                    samReader = SeProxyService.getInstance().getPlugin(event.getPluginName())
-                            .getReader(readerName);
-                } catch (KeyplePluginNotFoundException e) {
-                    logger.error("Plugin not found {}", event.getPluginName());
+                    samReader = samReaderPlugin.getReader(readerName);
                 } catch (KeypleReaderNotFoundException e) {
                     logger.error("Reader not found {}", readerName);
                 }
+
                 switch (event.getEventType()) {
                     case READER_CONNECTED:
                         logger.info("New reader! READERNAME = {}", samReader.getName());
@@ -316,22 +313,23 @@ public class SamResourceManager {
                             if (samReader instanceof ObservableReader && readerObserver != null) {
                                 logger.info("Add observer READERNAME = {}", samReader.getName());
                                 ((ObservableReader) samReader).addObserver(readerObserver);
-                                ((ObservableReader) samReader).startSeDetection(ObservableReader.PollingMode.REPEATING);
+                                ((ObservableReader) samReader)
+                                        .startSeDetection(ObservableReader.PollingMode.REPEATING);
                             } else {
                                 logger.info("No observer to add READERNAME = {}",
                                         samReader.getName());
-                                try {
-                                    if (samReader.isSePresent()) {
-                                        logger.debug("Create SAM resource: {}", readerName);
-                                        synchronized (localSamResources) {
-                                            localSamResources.add(createSamResource(samReader));
-                                        }
+                            }
+                            try {
+                                if (samReader.isSePresent()) {
+                                    logger.debug("Create SAM resource: {}", readerName);
+                                    synchronized (localSamResources) {
+                                        localSamResources.add(createSamResource(samReader));
                                     }
-                                } catch (KeypleIOReaderException e) {
-                                    logger.error("Error in reader", e);
-                                } catch (KeypleReaderException e) {
-                                    logger.error("Error in reader", e);
                                 }
+                            } catch (KeypleIOReaderException e) {
+                                logger.error("Error in reader", e);
+                            } catch (KeypleReaderException e) {
+                                logger.error("Error in reader", e);
                             }
                         } else {
                             logger.debug("Reader not matching: {}", readerName);
@@ -395,7 +393,7 @@ public class SamResourceManager {
             try {
                 samReader = samReaderPlugin.getReader(event.getReaderName());
             } catch (KeypleReaderNotFoundException e) {
-                e.printStackTrace();
+                logger.error("KeypleReaderNotFoundException: {}", e);
             }
             synchronized (localSamResources) {
                 switch (event.getEventType()) {
@@ -411,7 +409,7 @@ public class SamResourceManager {
                         } catch (KeypleReaderException e) {
                             logger.error("Reader failure while creating a SamResource from {}",
                                     samReader.getName());
-                            e.printStackTrace();
+                            logger.error("KeypleReaderException: {}", e);
                         }
                         /* failures are ignored */
                         if (newSamResource != null) {
