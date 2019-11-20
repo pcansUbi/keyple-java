@@ -21,6 +21,8 @@ import org.eclipse.keyple.calypso.command.po.parser.ReadDataStructure;
 import org.eclipse.keyple.calypso.command.po.parser.ReadRecordsRespPars;
 import org.eclipse.keyple.calypso.command.sam.SamRevision;
 import org.eclipse.keyple.calypso.transaction.*;
+import org.eclipse.keyple.calypso.transaction.exception.KeypleCalypsoNoSamResourceException;
+import org.eclipse.keyple.calypso.transaction.exception.KeypleCalypsoSamResourceFailureException;
 import org.eclipse.keyple.core.selection.SeSelection;
 import org.eclipse.keyple.core.selection.SelectionsResult;
 import org.eclipse.keyple.core.seproxy.*;
@@ -43,7 +45,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.profiler.Profiler;
 
 /**
- * <h1>Use Case ‘Calypso 5’ – SAM Resource Manager (PC/SC)</h1>
+ * <h1>Use Case ‘Calypso 6’ – SAM Resource Manager (PC/SC)</h1>
  */
 public final class UseCase_Calypso6_SamResourceManager_Pcsc implements PluginObserver {
     private static final Logger logger =
@@ -80,19 +82,21 @@ public final class UseCase_Calypso6_SamResourceManager_Pcsc implements PluginObs
         ReaderPlugin pcscPlugin = SeProxyService.getInstance().getPlugin(PcscPlugin.PLUGIN_NAME);
 
         /* Create a meta plugin with the PCSC plugin as base plugin */
-        MetaPlugin metaPlugin = new MetaPlugin(pcscPlugin);
+        PluginHub pluginHub = new PluginHub(pcscPlugin);
 
         /* Create two slave plugins dedicated to SAM and PO */
         ReaderPluginSlave samPlugin = new ReaderPluginSlave("SamPlugin");
         poPlugin = new ReaderPluginSlave("PoPlugin");
 
-        metaPlugin.registerSlave(samPlugin,
+        pluginHub.registerSlavePlugin(samPlugin,
                 ".*(Cherry TC|SCM Microsystems|Identive|HID|Generic).*");
 
-        metaPlugin.registerSlave(poPlugin, ".*(ASK|ACS|SpringCard).*");
+        pluginHub.registerSlavePlugin(poPlugin, ".*(ASK|ACS|SpringCard).*");
 
-        samResourceManager = new SamResourceManager(samPlugin, ".*"); // TODO check if filter is
-                                                                      // still useful
+        PcscHsmPoolPluginImpl samPoolPlugin = new PcscHsmPoolPluginImpl(samPlugin);
+
+        samResourceManager = new SamResourceManager(samPoolPlugin, ".*"); // TODO check if filter is
+                                                                          // still useful
 
         /* create a PoReaderObserver ready for the SE selection */
         poReaderObserver = new PoReaderObserver(getSeSelection());
@@ -101,7 +105,7 @@ public final class UseCase_Calypso6_SamResourceManager_Pcsc implements PluginObs
         ((ObservablePlugin) poPlugin).addObserver(this);
 
         /* start reader observation */
-        metaPlugin.startObservation();
+        pluginHub.startObservation();
 
 
         logger.info(
@@ -320,12 +324,11 @@ public final class UseCase_Calypso6_SamResourceManager_Pcsc implements PluginObs
                             samResource = samResourceManager.allocateSamResource(
                                     SamResourceManager.AllocationMode.BLOCKING,
                                     new SamIdentifier(SamRevision.AUTO, "", "0"));
-                            if (samResource == null) {
-                                logger.error("No SAM resource available.");
-                                return;
-                            }
-                        } catch (KeypleReaderException e) {
-                            logger.error("KeypleReaderException: {}", e);
+                        } catch (KeypleCalypsoNoSamResourceException e) {
+                            logger.error("No SAM resource available.");
+                            return;
+                        } catch (KeypleCalypsoSamResourceFailureException e) {
+                            e.printStackTrace();
                         }
 
 
@@ -399,7 +402,11 @@ public final class UseCase_Calypso6_SamResourceManager_Pcsc implements PluginObs
                         logger.error(
                                 "The selection of the PO has failed. Should not have occurred due to the MATCHED_ONLY selection mode.");
                     }
-                    samResourceManager.freeSamResource(samResource);
+                    try {
+                        samResourceManager.freeSamResource(samResource);
+                    } catch (KeypleCalypsoSamResourceFailureException e) {
+                        e.printStackTrace();
+                    }
                     break;
                 case SE_INSERTED:
                     logger.error(

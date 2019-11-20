@@ -11,10 +11,10 @@
  ********************************************************************************/
 package org.eclipse.keyple.integration.experimental.samresourcemanager;
 
-import org.eclipse.keyple.core.seproxy.ReaderPoolPlugin;
+import org.eclipse.keyple.calypso.transaction.HsmPlugin;
 
-public interface PcscPoolPlugin extends ReaderPoolPlugin {
-    String PLUGIN_NAME = "PcscPoolPlugin";
+public interface PcscHsmPoolPlugin extends HsmPlugin {
+    String PLUGIN_NAME = "PcscHsmPoolPlugin";
 
     /**
      * Plugin parameters keys
