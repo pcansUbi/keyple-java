@@ -22,18 +22,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The MetaPlugin class provides {@link ReaderPlugin}s as subsets of the base plugin provided in the
+ * The PluginHub class provides {@link ReaderPlugin}s as subsets of the base plugin provided in the
  * constructor.
  * <p>
- * It allows child plugins (slave plugins) to be registered in order to receive event notifications
- * from the base plugin (connecting and disconnecting readers) according to a filtering based on the
- * name of the readers.
+ * It allows slave plugins to be registered in order to receive event notifications from the base
+ * plugin (connecting and disconnecting readers) according to a filtering based on the name of the
+ * readers.
  */
-public class MetaPlugin implements ObservablePlugin.PluginObserver {
+public class PluginHub implements ObservablePlugin.PluginObserver {
     /**
      * logger
      */
-    private static final Logger logger = LoggerFactory.getLogger(MetaPlugin.class);
+    private static final Logger logger = LoggerFactory.getLogger(PluginHub.class);
 
     /**
      * The base plugin from which events will be received and the readers retrieved..
@@ -43,14 +43,15 @@ public class MetaPlugin implements ObservablePlugin.PluginObserver {
     /**
      * The list of registered slave plugins
      */
-    private final SortedSet<ChildPlugin> childPlugins = new TreeSet<ChildPlugin>();
+    private final SortedSet<RegisteredSlavePlugin> registeredSlavePlugins =
+            new TreeSet<RegisteredSlavePlugin>();
 
     /**
-     * Instantiates a MetaPlugin from the provided base plugin.
+     * Instantiates a PluginHub from the provided base plugin.
      *
      * @param readerPlugin the base plugin
      */
-    public MetaPlugin(ReaderPlugin readerPlugin) {
+    public PluginHub(ReaderPlugin readerPlugin) {
         this.readerPlugin = readerPlugin;
     }
 
@@ -61,10 +62,11 @@ public class MetaPlugin implements ObservablePlugin.PluginObserver {
      * @param readerNameFilter a filter applied to the name of the reader
      * @return true if the slave plugin has been registered successfully
      */
-    boolean registerSlave(ReaderPluginSlave readerPluginSlave, String readerNameFilter) {
-        ChildPlugin childPlugin = new ChildPlugin(readerPluginSlave, readerNameFilter);
-        if (!childPlugins.contains(childPlugin)) {
-            return childPlugins.add(childPlugin);
+    boolean registerSlavePlugin(ReaderPluginSlave readerPluginSlave, String readerNameFilter) {
+        RegisteredSlavePlugin registeredSlavePlugin =
+                new RegisteredSlavePlugin(readerPluginSlave, readerNameFilter);
+        if (!registeredSlavePlugins.contains(registeredSlavePlugin)) {
+            return registeredSlavePlugins.add(registeredSlavePlugin);
         }
         return false;
     }
@@ -91,14 +93,14 @@ public class MetaPlugin implements ObservablePlugin.PluginObserver {
     @Override
     public void update(PluginEvent event) {
         for (String readerName : event.getReaderNames()) {
-            for (ChildPlugin childPlugin : childPlugins) {
-                if (childPlugin.isNameMatching(readerName)) {
+            for (RegisteredSlavePlugin registeredSlavePlugin : registeredSlavePlugins) {
+                if (registeredSlavePlugin.isNameMatching(readerName)) {
                     try {
                         if (event.getEventType() == PluginEvent.EventType.READER_CONNECTED) {
-                            childPlugin.getReaderPluginSlave()
+                            registeredSlavePlugin.getReaderPluginSlave()
                                     .addReader(readerPlugin.getReader(readerName));
                         } else {
-                            childPlugin.getReaderPluginSlave()
+                            registeredSlavePlugin.getReaderPluginSlave()
                                     .removeReader(readerPlugin.getReader(readerName));
                         }
                     } catch (KeypleReaderNotFoundException e) {
@@ -112,13 +114,20 @@ public class MetaPlugin implements ObservablePlugin.PluginObserver {
     /**
      * Class associating a {@link ReaderPluginSlave} and a filter on the name of the reader.
      * <p>
-     * Allows the creation of a list.
+     * Allows the creation of a list, implements the Comparable interface to enable the use of the
+     * "contains" method with the built lists.
      */
-    private class ChildPlugin implements Comparable {
+    private class RegisteredSlavePlugin implements Comparable {
         private final ReaderPluginSlave readerPluginSlave;
         private final String readerNameFilter;
 
-        ChildPlugin(ReaderPluginSlave readerPluginSlave, String readerNameFilter) {
+        /**
+         * Instantiation with ReaderPluginSlave and regex String
+         * 
+         * @param readerPluginSlave the {@link ReaderPluginSlave}
+         * @param readerNameFilter a regular expression
+         */
+        RegisteredSlavePlugin(ReaderPluginSlave readerPluginSlave, String readerNameFilter) {
             if (readerPluginSlave == null || readerNameFilter == null) {
                 throw new IllegalArgumentException("Null argument not allowed.");
             }
@@ -140,10 +149,10 @@ public class MetaPlugin implements ObservablePlugin.PluginObserver {
 
         @Override
         public int compareTo(Object obj) {
-            if (!(obj instanceof ChildPlugin)) {
+            if (!(obj instanceof RegisteredSlavePlugin)) {
                 return -1;
             }
-            return ((ChildPlugin) obj).getReaderPluginSlave().getName()
+            return ((RegisteredSlavePlugin) obj).getReaderPluginSlave().getName()
                     .compareTo(this.readerPluginSlave.getName());
         }
     }
