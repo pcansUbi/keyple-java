@@ -78,7 +78,9 @@ public class Demo_CalypsoClassic_Stub {
         poReader.addSeProtocolSetting(SeCommonProtocols.PROTOCOL_B_PRIME,
                 StubProtocolSetting.STUB_PROTOCOL_SETTING.get(SeCommonProtocols.PROTOCOL_B_PRIME));
 
-        samReader.addSeProtocolSetting(SeCommonProtocols.PROTOCOL_ISO7816_3, ".*");
+        samReader.addSeProtocolSetting(SeCommonProtocols.PROTOCOL_ISO7816_3,
+                StubProtocolSetting.STUB_PROTOCOL_SETTING
+                        .get(SeCommonProtocols.PROTOCOL_ISO7816_3));
 
         /* Assign readers to the Hoplink transaction engine */
         transactionEngine.setReaders(poReader, samReader);

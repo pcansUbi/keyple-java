@@ -97,30 +97,96 @@ public class ByteArrayUtilTest {
     @Test
     public void threeBytesToInt_buffer_ok_1() {
         int value = ByteArrayUtil.threeBytesToInt(BYTEARRAY_LEN_3, 0);
-        assertEquals(value, 0x123456);
+        assertEquals(0x123456, value);
     }
 
     @Test
     public void threeBytesToInt_buffer_ok_2() {
         int value = ByteArrayUtil.threeBytesToInt(BYTEARRAY_GOOD, 0);
-        assertEquals(value, 0x123456);
+        assertEquals(0x123456, value);
     }
 
     @Test
     public void threeBytesToInt_buffer_ok_3() {
         int value = ByteArrayUtil.threeBytesToInt(BYTEARRAY_GOOD, 1);
-        assertEquals(value, 0x345678);
+        assertEquals(0x345678, value);
     }
 
     @Test
     public void threeBytesToInt_buffer_ok_4() {
         int value = ByteArrayUtil.threeBytesToInt(BYTEARRAY_GOOD, 4);
-        assertEquals(value, 0x90ABCD);
+        assertEquals(0x90ABCD, value);
     }
 
     @Test
     public void threeBytesToInt_buffer_ok_5() {
         int value = ByteArrayUtil.threeBytesToInt(BYTEARRAY_GOOD, 13);
-        assertEquals(value, 0x654321);
+        assertEquals(0x654321, value);
+    }
+
+    @Test
+    public void threeBytesSignedToInt_buffer_ok_1() {
+        int value = ByteArrayUtil.threeBytesSignedToInt(BYTEARRAY_LEN_3, 0);
+        assertEquals(0x123456, value);
+    }
+
+    @Test
+    public void threeBytesSignedToInt_buffer_ok_2() {
+        int value = ByteArrayUtil.threeBytesSignedToInt(BYTEARRAY_GOOD, 0);
+        assertEquals(0x123456, value);
+    }
+
+    @Test
+    public void threeBytesSignedToInt_buffer_ok_3() {
+        int value = ByteArrayUtil.threeBytesSignedToInt(BYTEARRAY_GOOD, 1);
+        assertEquals(0x345678, value);
+    }
+
+    @Test
+    public void threeBytesSignedToInt_buffer_ok_4() {
+        int value = ByteArrayUtil.threeBytesSignedToInt(BYTEARRAY_GOOD, 4);
+        assertEquals(-7296051, value);
+    }
+
+    @Test
+    public void threeBytesSignedToInt_buffer_ok_5() {
+        int value = ByteArrayUtil.threeBytesSignedToInt(BYTEARRAY_GOOD, 13);
+        assertEquals(0x654321, value);
+    }
+
+    @Test
+    public void threeBytesSignedToInt_buffer_ok_6() {
+        int value = ByteArrayUtil.threeBytesSignedToInt(ByteArrayUtil.fromHex("000000"), 0);
+        assertEquals(0, value);
+    }
+
+    @Test
+    public void threeBytesSignedToInt_buffer_ok_7() {
+        int value = ByteArrayUtil.threeBytesSignedToInt(ByteArrayUtil.fromHex("000100"), 0);
+        assertEquals(256, value);
+    }
+
+    @Test
+    public void threeBytesSignedToInt_buffer_ok_8() {
+        int value = ByteArrayUtil.threeBytesSignedToInt(ByteArrayUtil.fromHex("010000"), 0);
+        assertEquals(65536, value);
+    }
+
+    @Test
+    public void threeBytesSignedToInt_buffer_ok_9() {
+        int value = ByteArrayUtil.threeBytesSignedToInt(ByteArrayUtil.fromHex("FFFFFF"), 0);
+        assertEquals(-1, value);
+    }
+
+    @Test
+    public void threeBytesSignedToInt_buffer_ok_10() {
+        int value = ByteArrayUtil.threeBytesSignedToInt(ByteArrayUtil.fromHex("800000"), 0);
+        assertEquals(-8388608, value);
+    }
+
+    @Test
+    public void threeBytesSignedToInt_buffer_ok_11() {
+        int value = ByteArrayUtil.threeBytesSignedToInt(ByteArrayUtil.fromHex("7FFFFF"), 0);
+        assertEquals(8388607, value);
     }
 }
