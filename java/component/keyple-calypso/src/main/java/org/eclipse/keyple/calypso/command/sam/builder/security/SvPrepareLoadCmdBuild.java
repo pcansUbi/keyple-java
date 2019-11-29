@@ -11,8 +11,11 @@
  ********************************************************************************/
 package org.eclipse.keyple.calypso.command.sam.builder.security;
 
+import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvReloadCmdBuild;
+import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
 import org.eclipse.keyple.calypso.command.sam.AbstractSamCommandBuilder;
 import org.eclipse.keyple.calypso.command.sam.CalypsoSamCommands;
+import org.eclipse.keyple.calypso.command.sam.SamRevision;
 
 /**
  * Builder for the SAM SV Prepare Load APDU command.
@@ -23,18 +26,28 @@ public class SvPrepareLoadCmdBuild extends AbstractSamCommandBuilder {
 
     /**
      * Instantiates a new SvPrepareLoadCmdBuild to a load transaction.
-     *
+     * <p>
+     * Build the SvPrepareLoad APDU from the SvGet command and response, the SvReload partial
+     * command
+     * 
+     * @param samRevision the SAM revision
+     * @param svGetRespPars the SV get response parser
+     * @param svReloadCmdBuild the SV reload command builder
      */
-    public SvPrepareLoadCmdBuild() {
+    public SvPrepareLoadCmdBuild(SamRevision samRevision, SvGetRespPars svGetRespPars,
+            SvReloadCmdBuild svReloadCmdBuild) {
         super(command, null);
 
-        byte cla = this.defaultRevision.getClassByte();
+        byte cla = samRevision.getClassByte();
+        byte p1 = (byte) 0x01;
+        byte p2 = (byte) 0xFF;
+        int svGetDataLength = svGetRespPars.getApduResponse().getBytes().length;
+        byte[] data = new byte[4 + svGetDataLength];
 
-        byte p1, p2;
-        byte[] data = null;
-
-        p1 = (byte) 0x00;
-        p2 = (byte) 0x00;
+        System.arraycopy(svGetRespPars.getSvGetCommandHeader(), 0, data, 0, 4);
+        System.arraycopy(svGetRespPars.getApduResponse().getBytes(), 0, data, 4, svGetDataLength);
+        System.arraycopy(svReloadCmdBuild.getSvReloadData(), 0, data, 4 + svGetDataLength,
+                svReloadCmdBuild.getSvReloadData().length);
 
         request = setApduRequest(cla, command, p1, p2, data, null);
     }

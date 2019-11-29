@@ -14,6 +14,7 @@ package org.eclipse.keyple.calypso.command.po.parser.storedvalue;
 import org.eclipse.keyple.core.seproxy.message.ApduResponse;
 import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 /*
@@ -21,10 +22,18 @@ import org.junit.Test;
  * balance and amount fields.
  */
 public class SvGetRespParsTest {
+    byte[] header;
+
+    // init before each test
+    @Before
+    public void SetUp() {
+        header = ByteArrayUtil.fromHex("7C000721");
+    }
+
     @Test(expected = IllegalStateException.class)
     public void badLength() {
         ApduResponse apduResponse = new ApduResponse(ByteArrayUtil.fromHex("0011 9000"), null);
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
     }
 
     @Test
@@ -55,7 +64,7 @@ public class SvGetRespParsTest {
                 /* Debit SV TNum (2) */ "F568" +
                 /* Successful execution status word */ "9000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         /* check length */
         Assert.assertEquals(0x3D + 2, svGetRespPars.getApduResponse().getBytes().length);
@@ -111,7 +120,7 @@ public class SvGetRespParsTest {
                 /* DA 1 */ "0001" + "12356789BBBBCCDDEE234567" +
                 /* DB 1 */ "000001" + "45689000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(1, svGetRespPars.getBalance());
         Assert.assertEquals(1, svGetRespPars.getLoadLog().getBalance());
@@ -129,7 +138,7 @@ public class SvGetRespParsTest {
                 /* DA 257 */ "0101" + "12356789BBBBCCDDEE234567" +
                 /* DB 256 */ "000100" + "45689000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(256, svGetRespPars.getBalance());
         Assert.assertEquals(257, svGetRespPars.getLoadLog().getBalance());
@@ -147,7 +156,7 @@ public class SvGetRespParsTest {
                 /* DA -32768 */ "8000" + "12356789BBBBCCDDEE234567" +
                 /* DB 65536 */ "010000" + "45689000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(65536, svGetRespPars.getBalance());
         Assert.assertEquals(65537, svGetRespPars.getLoadLog().getBalance());
@@ -166,7 +175,7 @@ public class SvGetRespParsTest {
                 /* DA 32767 */ "7FFF" + "12356789BBBBCCDDEE234567" +
                 /* DB 8388607 */ "7FFFFF" + "45689000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(8388607, svGetRespPars.getBalance());
         Assert.assertEquals(8388607, svGetRespPars.getLoadLog().getBalance());
@@ -184,7 +193,7 @@ public class SvGetRespParsTest {
                 /* DA -1 */ "FFFF" + "12356789BBBBCCDDEE234567" +
                 /* DB -1 */ "FFFFFF" + "45689000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(-1, svGetRespPars.getBalance());
         Assert.assertEquals(-1, svGetRespPars.getLoadLog().getBalance());
@@ -203,7 +212,7 @@ public class SvGetRespParsTest {
                 /* DA -32768 */ "8000" + "12356789BBBBCCDDEE234567" +
                 /* DB -8388608 */ "800000" + "45689000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(-8388608, svGetRespPars.getBalance());
         Assert.assertEquals(-8388608, svGetRespPars.getLoadLog().getBalance());
@@ -232,7 +241,7 @@ public class SvGetRespParsTest {
                 /* Load SV TNum (2) */ "E567" +
                 /* Successful execution status word */ "9000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         /* check length */
         Assert.assertEquals(0x21 + 2, svGetRespPars.getApduResponse().getBytes().length);
@@ -268,7 +277,7 @@ public class SvGetRespParsTest {
         /* LB 1 */ "000001" +
         /* LA 1 */"000001" + "5678AABBCCDDD23456E5679000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(1, svGetRespPars.getBalance());
         Assert.assertEquals(1, svGetRespPars.getLoadLog().getBalance());
@@ -282,7 +291,7 @@ public class SvGetRespParsTest {
         /* LB 1 */ "000101" +
         /* LA 1 */"000100" + "5678AABBCCDDD23456E5679000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(256, svGetRespPars.getBalance());
         Assert.assertEquals(257, svGetRespPars.getLoadLog().getBalance());
@@ -296,7 +305,7 @@ public class SvGetRespParsTest {
         /* LB 1 */ "010001" +
         /* LA 1 */"010000" + "5678AABBCCDDD23456E5679000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(65536, svGetRespPars.getBalance());
         Assert.assertEquals(65537, svGetRespPars.getLoadLog().getBalance());
@@ -310,7 +319,7 @@ public class SvGetRespParsTest {
         /* LB 1 */ "7FFFFF" +
         /* LA 1 */"7FFFFF" + "5678AABBCCDDD23456E5679000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(8388607, svGetRespPars.getBalance());
         Assert.assertEquals(8388607, svGetRespPars.getLoadLog().getBalance());
@@ -324,7 +333,7 @@ public class SvGetRespParsTest {
         /* LB 1 */ "800000" +
         /* LA 1 */"800000" + "5678AABBCCDDD23456E5679000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(-8388608, svGetRespPars.getBalance());
         Assert.assertEquals(-8388608, svGetRespPars.getLoadLog().getBalance());
@@ -338,7 +347,7 @@ public class SvGetRespParsTest {
         /* LB 1 */ "FFFFFF" +
         /* LA 1 */"FFFFFF" + "5678AABBCCDDD23456E5679000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(-1, svGetRespPars.getBalance());
         Assert.assertEquals(-1, svGetRespPars.getLoadLog().getBalance());
@@ -363,7 +372,7 @@ public class SvGetRespParsTest {
                 /* Debit SV TNum (2) */ "F568" +
                 /* Successful execution status word */ "9000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         /* check length */
         Assert.assertEquals(0x1E + 2, svGetRespPars.getApduResponse().getBytes().length);
@@ -397,7 +406,7 @@ public class SvGetRespParsTest {
         /* DA 1 */ "0001" + "12356789BBBBCCDDEEA34567" +
         /* DB 1 */ "000001" + "F5689000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(1, svGetRespPars.getBalance());
         Assert.assertEquals(1, svGetRespPars.getDebitLog().getBalance());
@@ -411,7 +420,7 @@ public class SvGetRespParsTest {
         /* DA 1 */ "0101" + "12356789BBBBCCDDEEA34567" +
         /* DB 1 */ "000100" + "F5689000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(256, svGetRespPars.getBalance());
         Assert.assertEquals(256, svGetRespPars.getDebitLog().getBalance());
@@ -425,7 +434,7 @@ public class SvGetRespParsTest {
         /* DA 1 */ "8000" + "12356789BBBBCCDDEEA34567" +
         /* DB 1 */ "010000" + "F5689000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(65536, svGetRespPars.getBalance());
         Assert.assertEquals(65536, svGetRespPars.getDebitLog().getBalance());
@@ -439,7 +448,7 @@ public class SvGetRespParsTest {
         /* DA 1 */ "7FFF" + "12356789BBBBCCDDEEA34567" +
         /* DB 1 */ "7FFFFF" + "F5689000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(8388607, svGetRespPars.getBalance());
         Assert.assertEquals(8388607, svGetRespPars.getDebitLog().getBalance());
@@ -453,7 +462,7 @@ public class SvGetRespParsTest {
         /* DA 1 */ "8000" + "12356789BBBBCCDDEEA34567" +
         /* DB 1 */ "800000" + "F5689000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(-8388608, svGetRespPars.getBalance());
         Assert.assertEquals(-8388608, svGetRespPars.getDebitLog().getBalance());
@@ -467,7 +476,7 @@ public class SvGetRespParsTest {
         /* DA 1 */ "FFFF" + "12356789BBBBCCDDEEA34567" +
         /* DB 1 */ "FFFFFF" + "F5689000"), null);
 
-        SvGetRespPars svGetRespPars = new SvGetRespPars(apduResponse);
+        SvGetRespPars svGetRespPars = new SvGetRespPars(header, apduResponse);
 
         Assert.assertEquals(-1, svGetRespPars.getBalance());
         Assert.assertEquals(-1, svGetRespPars.getDebitLog().getBalance());

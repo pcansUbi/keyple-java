@@ -12,8 +12,8 @@
 package org.eclipse.keyple.calypso.command.po.builder.storedvalue;
 
 import static org.junit.Assert.*;
-import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.PoRevision;
+import org.eclipse.keyple.calypso.transaction.SvOperation;
 import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.junit.Assert;
 import org.junit.Test;
@@ -21,8 +21,8 @@ import org.junit.Test;
 public class SvGetCmdBuildTest {
     @Test
     public void svGetCmdBuild_mode_rev32_reload() {
-        SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_1,
-                SvGetCmdBuild.SvOperation.RELOAD, "Test 1");
+        SvGetCmdBuild svGetCmdBuild =
+                new SvGetCmdBuild(PoRevision.REV3_1, SvOperation.RELOAD, "Test 1");
 
         String cmdBytes = ByteArrayUtil.toHex(svGetCmdBuild.getApduRequest().getBytes());
 
@@ -31,8 +31,8 @@ public class SvGetCmdBuildTest {
 
     @Test
     public void svGetCmdBuild_mode_rev32_debit() {
-        SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_1,
-                SvGetCmdBuild.SvOperation.DEBIT, "Test 2");
+        SvGetCmdBuild svGetCmdBuild =
+                new SvGetCmdBuild(PoRevision.REV3_1, SvOperation.DEBIT, "Test 2");
 
         String cmdBytes = ByteArrayUtil.toHex(svGetCmdBuild.getApduRequest().getBytes());
 
@@ -41,8 +41,8 @@ public class SvGetCmdBuildTest {
 
     @Test
     public void svGetCmdBuild_mode_rev32_undebit() {
-        SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_1,
-                SvGetCmdBuild.SvOperation.UNDEBIT, "Test 2");
+        SvGetCmdBuild svGetCmdBuild =
+                new SvGetCmdBuild(PoRevision.REV3_1, SvOperation.UNDEBIT, "Test 2");
 
         String cmdBytes = ByteArrayUtil.toHex(svGetCmdBuild.getApduRequest().getBytes());
 
@@ -51,8 +51,8 @@ public class SvGetCmdBuildTest {
 
     @Test
     public void svGetCmdBuild_mode_compat_reload() {
-        SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_2,
-                SvGetCmdBuild.SvOperation.RELOAD, "Test 4");
+        SvGetCmdBuild svGetCmdBuild =
+                new SvGetCmdBuild(PoRevision.REV3_2, SvOperation.RELOAD, "Test 4");
 
         String cmdBytes = ByteArrayUtil.toHex(svGetCmdBuild.getApduRequest().getBytes());
 
@@ -61,8 +61,8 @@ public class SvGetCmdBuildTest {
 
     @Test
     public void svGetCmdBuild_mode_compat_debit() {
-        SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_2,
-                SvGetCmdBuild.SvOperation.DEBIT, "Test 5");
+        SvGetCmdBuild svGetCmdBuild =
+                new SvGetCmdBuild(PoRevision.REV3_2, SvOperation.DEBIT, "Test 5");
 
         String cmdBytes = ByteArrayUtil.toHex(svGetCmdBuild.getApduRequest().getBytes());
 
@@ -71,8 +71,8 @@ public class SvGetCmdBuildTest {
 
     @Test
     public void svGetCmdBuild_mode_compat_undebit() {
-        SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_2,
-                SvGetCmdBuild.SvOperation.UNDEBIT, "Test 6");
+        SvGetCmdBuild svGetCmdBuild =
+                new SvGetCmdBuild(PoRevision.REV3_2, SvOperation.UNDEBIT, "Test 6");
 
         String cmdBytes = ByteArrayUtil.toHex(svGetCmdBuild.getApduRequest().getBytes());
 

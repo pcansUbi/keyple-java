@@ -87,7 +87,7 @@ public abstract class AbstractApduCommandBuilder {
      *
      * @return the request
      */
-    public final ApduRequest getApduRequest() {
+    public ApduRequest getApduRequest() {
         return request;
     }
 
