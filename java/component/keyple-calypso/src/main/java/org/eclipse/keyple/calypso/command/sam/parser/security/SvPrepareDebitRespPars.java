@@ -47,12 +47,4 @@ public class SvPrepareDebitRespPars extends AbstractSamResponseParser {
         super(response);
     }
 
-    /**
-     * Gets the 32 bytes of ciphered data.
-     *
-     * @return the ciphered data byte array or null if the operation failed
-     */
-    public byte[] getCipheredData() {
-        return isSuccessful() ? response.getDataOut() : null;
-    }
 }

@@ -17,6 +17,8 @@ import org.eclipse.keyple.calypso.command.po.AbstractPoCommandBuilder;
 import org.eclipse.keyple.calypso.command.po.PoBuilderParser;
 import org.eclipse.keyple.calypso.command.po.builder.*;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvGetCmdBuild;
+import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
+import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,10 +38,12 @@ public class PoCommandsManager {
     /** The command index, incremented each time a command is added */
     private int preparedCommandIndex;
     private boolean preparedCommandsProcessed;
+    private int svGetIndex;
     private SvOperation svOperation = SvOperation.NONE;
 
     PoCommandsManager() {
         preparedCommandsProcessed = true;
+        svGetIndex = -1;
     }
 
     /**
@@ -96,6 +100,7 @@ public class PoCommandsManager {
             if (this.svOperation != SvOperation.NONE) {
                 throw new IllegalStateException("Only one SV operation per session is allowed.");
             }
+            svGetIndex = preparedCommandIndex;
         } else {
             // SvReload, SvDebit or SvUndebit
             if (!poBuilderParserList.isEmpty()) {
@@ -134,5 +139,32 @@ public class PoCommandsManager {
      */
     public List<PoBuilderParser> getPoBuilderParserList() {
         return poBuilderParserList;
+    }
+
+    /**
+     * Returns the parser positioned at the indicated index
+     * 
+     * @param commandIndex the index of the wanted parser
+     * @return the parser
+     */
+    public AbstractApduResponseParser getResponseParser(int commandIndex) {
+        if (commandIndex >= poBuilderParserList.size()) {
+            throw new IllegalArgumentException(
+                    String.format("Bad command index: index = %d, number of commands = %d",
+                            commandIndex, poBuilderParserList.size()));
+        }
+        return poBuilderParserList.get(commandIndex).getResponseParser();
+    }
+
+    /**
+     * Returns the SvGet parser
+     * 
+     * @return the parser
+     */
+    public SvGetRespPars getSvGetResponseParser() {
+        if (svGetIndex != poBuilderParserList.size() - 1) {
+            throw new IllegalStateException("No SvGet builder is available");
+        }
+        return (SvGetRespPars) poBuilderParserList.get(svGetIndex).getResponseParser();
     }
 }

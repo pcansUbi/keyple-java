@@ -28,6 +28,7 @@ import org.eclipse.keyple.calypso.command.sam.builder.security.*;
 import org.eclipse.keyple.calypso.command.sam.parser.security.DigestAuthenticateRespPars;
 import org.eclipse.keyple.calypso.command.sam.parser.security.DigestCloseRespPars;
 import org.eclipse.keyple.calypso.command.sam.parser.security.SamGetChallengeRespPars;
+import org.eclipse.keyple.calypso.command.sam.parser.security.SvPrepareLoadRespPars;
 import org.eclipse.keyple.calypso.transaction.exception.*;
 import org.eclipse.keyple.core.command.AbstractApduCommandBuilder;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
@@ -86,6 +87,8 @@ public final class PoTransaction {
     private final byte[] poCalypsoInstanceSerial;
     /** The current CalypsoPo */
     private final CalypsoPo calypsoPo;
+    /** The current CalypsoSam */
+    private CalypsoSam calypsoSam;
     /** the type of the notified event. */
     private SessionState sessionState;
     /** Selected AID of the Calypso PO. */
@@ -131,6 +134,7 @@ public final class PoTransaction {
         this(poResource);
 
         samReader = (ProxyReader) samResource.getSeReader();
+        calypsoSam = (CalypsoSam) samResource.getMatchingSe();
 
         this.securitySettings = securitySettings;
     }
@@ -2071,16 +2075,41 @@ public final class PoTransaction {
      * @param free 2-byte free value
      * @param extraInfo extra information included in the logs (can be null or empty)
      * @return the command index
+     * @throws KeypleReaderException in case of failure during the SAM communication
      */
-    public int prepareSvReload(int amount, byte[] date, byte[] time, byte[] free,
-            String extraInfo) {
-        // TODO handle SV kvc
+    public int prepareSvReload(int amount, byte[] date, byte[] time, byte[] free, String extraInfo)
+            throws KeypleReaderException {
+        // TODO add the SV kvc management
         byte poSvKvc = 0;
+        // create the initial builder with the application data
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(calypsoPo.getRevision(), amount,
+                poSvKvc, date, time, free, extraInfo);
+
+        // get the complementary data from the SAM
+        SvPrepareLoadCmdBuild svPrepareLoadCmdBuild = new SvPrepareLoadCmdBuild(samRevision,
+                poCommandsManager.getSvGetResponseParser(), svReloadCmdBuild);
+
+        List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
+        samApduRequestList.add(svPrepareLoadCmdBuild.getApduRequest());
+
+        // build a SAM SeRequest
+        SeRequest samSeRequest = new SeRequest(samApduRequestList);
+
+        // execute the command
+        SeResponse samSeResponse = samReader.transmit(samSeRequest);
+
+        // create a parser
+        SvPrepareLoadRespPars svPrepareLoadRespPars =
+                new SvPrepareLoadRespPars(samSeResponse.getApduResponses().get(0));
+
+        // finalize the SvReload command builder with the data provided by the SAM
+        svReloadCmdBuild.finalizeBuilder(calypsoSam.getSerialNumber(),
+                svPrepareLoadRespPars.getApduResponse().getDataOut());
+
         /*
          * create and keep the PoBuilderParser, return the command index
          */
-        return poCommandsManager.addStoredValueCommand(new SvReloadCmdBuild(calypsoPo.getRevision(),
-                amount, poSvKvc, date, time, free, extraInfo), SvOperation.RELOAD);
+        return poCommandsManager.addStoredValueCommand(svReloadCmdBuild, SvOperation.RELOAD);
     }
 
     /**
@@ -2143,11 +2172,6 @@ public final class PoTransaction {
      * @return the corresponding command parser
      */
     public AbstractApduResponseParser getResponseParser(int commandIndex) {
-        if (commandIndex >= poCommandsManager.getPoBuilderParserList().size()) {
-            throw new IllegalArgumentException(
-                    String.format("Bad command index: index = %d, number of commands = %d",
-                            commandIndex, poCommandsManager.getPoBuilderParserList().size()));
-        }
-        return poCommandsManager.getPoBuilderParserList().get(commandIndex).getResponseParser();
+        return poCommandsManager.getResponseParser(commandIndex);
     }
 }
