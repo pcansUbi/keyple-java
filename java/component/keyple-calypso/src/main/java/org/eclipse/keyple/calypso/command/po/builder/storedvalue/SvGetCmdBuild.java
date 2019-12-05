@@ -12,6 +12,7 @@
 package org.eclipse.keyple.calypso.command.po.builder.storedvalue;
 
 
+import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.*;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
 import org.eclipse.keyple.calypso.transaction.SvOperation;
@@ -32,14 +33,15 @@ public final class SvGetCmdBuild extends AbstractPoCommandBuilder<SvGetRespPars>
     /**
      * Instantiates a new SvGetCmdBuild.
      *
+     * @param poClass the PO class
      * @param poRevision the PO revision
      * @param svOperation the desired SV operation
      * @param extraInfo extra information included in the logs (can be null or empty)
      * @throws IllegalArgumentException - if the command is inconsistent
      */
-    public SvGetCmdBuild(PoRevision poRevision, SvOperation svOperation, String extraInfo) {
+    public SvGetCmdBuild(PoClass poClass, PoRevision poRevision, SvOperation svOperation, String extraInfo) {
         super(command, null);
-        byte cla = poRevision.getPoClass().getValue();
+        byte cla = poClass.getValue();
         byte p1 = poRevision == PoRevision.REV3_2 ? (byte) 0x01 : (byte) 0x00;
         byte p2 = svOperation == SvOperation.RELOAD ? (byte) 0x07 : (byte) 0x09;
 

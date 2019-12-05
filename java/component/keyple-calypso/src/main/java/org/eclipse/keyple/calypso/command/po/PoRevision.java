@@ -12,44 +12,33 @@
 package org.eclipse.keyple.calypso.command.po;
 
 
-import org.eclipse.keyple.calypso.command.PoClass;
-
 /**
  * Calypso revisions
  */
 public enum PoRevision {
+
     /**
      * Calypso Revision 1 (CLA 0x94)
      */
-    REV1_0(PoClass.LEGACY),
+    REV1_0,
 
     /**
      * Calypso Revision 2.4 (CLA 0x94)
      */
-    REV2_4(PoClass.LEGACY),
+    REV2_4,
 
     /**
      * Calypso Revision 3.1 (CLA 0x00)
      */
-    REV3_1(PoClass.ISO),
+    REV3_1,
 
     /**
      * Calypso Revision 3.1 CLAP (CLA 0x00, application type 0x90)
      */
-    REV3_1_CLAP(PoClass.ISO),
+    REV3_1_CLAP,
 
     /**
      * Calypso Revision 3.2 (CLA 0x00)
      */
-    REV3_2(PoClass.ISO);
-
-    private final PoClass poClass;
-
-    public PoClass getPoClass() {
-        return poClass;
-    }
-
-    PoRevision(PoClass poClass) {
-        this.poClass = poClass;
-    }
+    REV3_2
 }

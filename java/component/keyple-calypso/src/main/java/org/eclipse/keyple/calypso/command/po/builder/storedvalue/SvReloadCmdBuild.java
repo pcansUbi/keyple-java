@@ -13,6 +13,8 @@ package org.eclipse.keyple.calypso.command.po.builder.storedvalue;
 
 
 import java.awt.*;
+
+import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.*;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvReloadRespPars;
 import org.eclipse.keyple.core.seproxy.message.ApduRequest;
@@ -27,8 +29,9 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
 
     /** The command. */
     private static final CalypsoPoCommands command = CalypsoPoCommands.SV_RELOAD;
-    /** apdu data array */
+    private final PoClass poClass;
     private final PoRevision poRevision;
+    /** apdu data array */
     private byte[] dataIn;
     private boolean finalized = false;
 
@@ -37,7 +40,8 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
      * <p>
      * The process is carried out in two steps: first to check and store the PO and application
      * data, then to create the final APDU with the data from the SAM (see finalizeBuilder).
-     * 
+     *
+     * @param poClass the PO class
      * @param poRevision the PO revision
      * @param amount amount to debit (signed integer from -8388608 to 8388607)
      * @param kvc debit key KVC (not checked by the PO)
@@ -47,8 +51,8 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
      * @param extraInfo extra information included in the logs (can be null or empty)
      * @throws IllegalArgumentException - if the command is inconsistent
      */
-    public SvReloadCmdBuild(PoRevision poRevision, int amount, byte kvc, byte[] date, byte[] time,
-            byte[] free, String extraInfo) {
+    public SvReloadCmdBuild(PoClass poClass, PoRevision poRevision, int amount, byte kvc, byte[] date, byte[] time,
+                            byte[] free, String extraInfo) {
         super(command, null);
 
         if (amount < -8388608 || amount > 8388607) {
@@ -63,6 +67,7 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
         }
         /* keeps a copy of these fields until the builder is finalized */
         this.poRevision = poRevision;
+        this.poClass = poClass;
         // handle the dataIn size with signatureHi length according to PO revision (the only varying
         // field)
         dataIn = new byte[18 + (poRevision == PoRevision.REV3_2 ? 10 : 5)];
@@ -108,17 +113,13 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
         byte p1 = svPrepareReloadData[0];
         byte p2 = svPrepareReloadData[1];
 
-        // handle the dataIn size with svPrepareReloadData length (the signature is the only varying
-        // field)
-        dataIn = new byte[12 + svPrepareReloadData.length];
-
         dataIn[0] = svPrepareReloadData[2];
         System.arraycopy(samId, 0, dataIn, 11, 4);
         System.arraycopy(svPrepareReloadData, 3, dataIn, 15, 3);
         System.arraycopy(svPrepareReloadData, 6, dataIn, 18, svPrepareReloadData.length - 6);
 
         this.request =
-                setApduRequest(poRevision.getPoClass().getValue(), command, p1, p2, dataIn, null);
+                setApduRequest(poClass.getValue(), command, p1, p2, dataIn, null);
 
         finalized = true;
     }

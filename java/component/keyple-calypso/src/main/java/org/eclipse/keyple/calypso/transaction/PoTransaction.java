@@ -2061,7 +2061,8 @@ public final class PoTransaction {
          * create and keep the PoBuilderParser, return the command index
          */
         return poCommandsManager.addStoredValueCommand(
-                new SvGetCmdBuild(calypsoPo.getRevision(), svOperation, extraInfo), svOperation);
+                new SvGetCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(), svOperation, extraInfo),
+                svOperation);
     }
 
     /**
@@ -2079,17 +2080,27 @@ public final class PoTransaction {
      */
     public int prepareSvReload(int amount, byte[] date, byte[] time, byte[] free, String extraInfo)
             throws KeypleReaderException {
-        // TODO add the SV kvc management
-        byte poSvKvc = 0;
+
+
         // create the initial builder with the application data
-        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(calypsoPo.getRevision(), amount,
-                poSvKvc, date, time, free, extraInfo);
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(),
+                amount, poCommandsManager.getSvGetResponseParser().getCurrentKVC(), date, time, free, extraInfo);
 
         // get the complementary data from the SAM
         SvPrepareLoadCmdBuild svPrepareLoadCmdBuild = new SvPrepareLoadCmdBuild(samRevision,
                 poCommandsManager.getSvGetResponseParser(), svReloadCmdBuild);
 
         List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
+        int svPrepareLoadCmdIndex;
+        if (!isDiversificationDone) {
+            AbstractApduCommandBuilder selectDiversifier =
+                    new SelectDiversifierCmdBuild(this.samRevision, poCalypsoInstanceSerial);
+            samApduRequestList.add(selectDiversifier.getApduRequest());
+            isDiversificationDone = true;
+            svPrepareLoadCmdIndex = 1;
+        } else {
+            svPrepareLoadCmdIndex = 0;
+        }
         samApduRequestList.add(svPrepareLoadCmdBuild.getApduRequest());
 
         // build a SAM SeRequest
@@ -2100,7 +2111,7 @@ public final class PoTransaction {
 
         // create a parser
         SvPrepareLoadRespPars svPrepareLoadRespPars =
-                new SvPrepareLoadRespPars(samSeResponse.getApduResponses().get(0));
+                new SvPrepareLoadRespPars(samSeResponse.getApduResponses().get(svPrepareLoadCmdIndex));
 
         // finalize the SvReload command builder with the data provided by the SAM
         svReloadCmdBuild.finalizeBuilder(calypsoSam.getSerialNumber(),
