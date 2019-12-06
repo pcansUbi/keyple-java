@@ -15,7 +15,10 @@ package org.eclipse.keyple.example.calypso.pc.usecase6;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Scanner;
+
+import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvDebitRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
+import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvReloadRespPars;
 import org.eclipse.keyple.calypso.transaction.*;
 import org.eclipse.keyple.core.selection.MatchingSelection;
 import org.eclipse.keyple.core.selection.SeSelection;
@@ -134,6 +137,11 @@ public class StoredValue_Pcsc {
 
             if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
                 return false;
+            } else {
+                SvGetRespPars svGetRespPars =
+                        ((SvGetRespPars) poTransaction.getResponseParser(svGetIndex));
+                logger.info("SV balance = {}", svGetRespPars.getBalance());
+                logger.info("Last reload amount = {}", svGetRespPars.getLoadLog().getAmount());
             }
 
             byte[] datenow;
@@ -150,10 +158,87 @@ public class StoredValue_Pcsc {
                     "SvReload: +" + amount);
 
             if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
+                logger.info("Reload operation successful.");
+                SvReloadRespPars svReloadRespPars =
+                        ((SvReloadRespPars) poTransaction.getResponseParser(svReloadIndex));
+                return true;
+            }
+        }
+        logger.error("Getting the SV balance failed.");
+        return false;
+    }
+
+
+    private static boolean svUnreload(int amount) throws KeypleReaderException {
+        if (selectPo()) {
+            PoTransaction poTransaction = new PoTransaction(poResource, samResource,
+                    CalypsoUtilities.getSecuritySettings());
+
+            int svGetIndex = poTransaction.prepareSvGet(SvOperation.RELOAD, "SvGet for RELOAD");
+
+            if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
+                return false;
+            } else {
+                SvGetRespPars svGetRespPars =
+                        ((SvGetRespPars) poTransaction.getResponseParser(svGetIndex));
+                logger.info("SV balance = {}", svGetRespPars.getBalance());
+                logger.info("Last reload amount = {}", svGetRespPars.getLoadLog().getAmount());
+            }
+
+            byte[] datenow;
+            byte[] timenow;
+            byte[] free;
+            Date now = new Date();
+            SimpleDateFormat dateFormater = new SimpleDateFormat("ddMM");
+            SimpleDateFormat timeFormater = new SimpleDateFormat("hhmm");
+            datenow = ByteArrayUtil.fromHex(dateFormater.format(now));
+            timenow = ByteArrayUtil.fromHex(timeFormater.format(now));
+            free = ByteArrayUtil.fromHex("0000");
+
+            int svReloadIndex = poTransaction.prepareSvReload(amount, datenow, timenow, free,
+                    "SvReload: +" + amount);
+
+            if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
+                logger.info("Reload operation successful.");
+                SvReloadRespPars svReloadRespPars =
+                        ((SvReloadRespPars) poTransaction.getResponseParser(svReloadIndex));
+                return true;
+            }
+        }
+        logger.error("Getting the SV balance failed.");
+        return false;
+    }
+
+    private static boolean svDebit(int amount) throws KeypleReaderException {
+        if (selectPo()) {
+            PoTransaction poTransaction = new PoTransaction(poResource, samResource,
+                    CalypsoUtilities.getSecuritySettings());
+
+            int svGetIndex = poTransaction.prepareSvGet(SvOperation.DEBIT, "SvGet for DEBIT");
+
+            if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
+                return false;
+            } else {
                 SvGetRespPars svGetRespPars =
                         ((SvGetRespPars) poTransaction.getResponseParser(svGetIndex));
                 logger.info("SV balance = {}", svGetRespPars.getBalance());
                 logger.info("Last debit amount = {}", svGetRespPars.getDebitLog().getAmount());
+            }
+
+            byte[] datenow;
+            byte[] timenow;
+            Date now = new Date();
+            SimpleDateFormat dateFormater = new SimpleDateFormat("ddMM");
+            SimpleDateFormat timeFormater = new SimpleDateFormat("hhmm");
+            datenow = ByteArrayUtil.fromHex(dateFormater.format(now));
+            timenow = ByteArrayUtil.fromHex(timeFormater.format(now));
+
+            int svDebitIndex = poTransaction.prepareSvDebit(amount, datenow, timenow, "SvDebit: +" + amount);
+
+            if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
+                logger.info("Debit operation successful.");
+                SvDebitRespPars svDebitRespPars =
+                        ((SvDebitRespPars) poTransaction.getResponseParser(svDebitIndex));
                 return true;
             }
         }
@@ -224,11 +309,13 @@ public class StoredValue_Pcsc {
                     logger.info("Enter the amount to unreload: ");
                     amount = keyboard.nextInt();
                     logger.info("Unreload amount = {}", amount);
+                    svReload(amount);
                     break;
                 case 3:
                     logger.info("Enter the amount to debit: ");
                     amount = keyboard.nextInt();
                     logger.info("Debit amount = {}", amount);
+                    svDebit(amount);
                     break;
                 case 4:
                     logger.info("Enter the amount to undebit: ");
