@@ -39,7 +39,8 @@ public final class SvGetCmdBuild extends AbstractPoCommandBuilder<SvGetRespPars>
      * @param extraInfo extra information included in the logs (can be null or empty)
      * @throws IllegalArgumentException - if the command is inconsistent
      */
-    public SvGetCmdBuild(PoClass poClass, PoRevision poRevision, SvOperation svOperation, String extraInfo) {
+    public SvGetCmdBuild(PoClass poClass, PoRevision poRevision, SvOperation svOperation,
+            String extraInfo) {
         super(command, null);
         byte cla = poClass.getValue();
         byte p1 = poRevision == PoRevision.REV3_2 ? (byte) 0x01 : (byte) 0x00;

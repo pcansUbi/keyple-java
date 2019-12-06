@@ -13,7 +13,6 @@ package org.eclipse.keyple.calypso.command.po.builder.storedvalue;
 
 
 import java.awt.*;
-
 import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.*;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvReloadRespPars;
@@ -51,8 +50,8 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
      * @param extraInfo extra information included in the logs (can be null or empty)
      * @throws IllegalArgumentException - if the command is inconsistent
      */
-    public SvReloadCmdBuild(PoClass poClass, PoRevision poRevision, int amount, byte kvc, byte[] date, byte[] time,
-                            byte[] free, String extraInfo) {
+    public SvReloadCmdBuild(PoClass poClass, PoRevision poRevision, int amount, byte kvc,
+            byte[] date, byte[] time, byte[] free, String extraInfo) {
         super(command, null);
 
         if (amount < -8388608 || amount > 8388607) {
@@ -65,11 +64,13 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
         if (date.length != 2 || time.length != 2 || free.length != 2) {
             throw new IllegalArgumentException("date, time and free must be 2-byte arrays");
         }
-        /* keeps a copy of these fields until the builder is finalized */
+
+        // keeps a copy of these fields until the builder is finalized
         this.poRevision = poRevision;
         this.poClass = poClass;
-        // handle the dataIn size with signatureHi length according to PO revision (the only varying
-        // field)
+
+        // handle the dataIn size with signatureHi length according to PO revision (3.2 rev have a
+        // 10-byte signature)
         dataIn = new byte[18 + (poRevision == PoRevision.REV3_2 ? 10 : 5)];
 
         // dataIn[0] will be filled in at the finalization phase.
@@ -83,7 +84,7 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
         dataIn[8] = (byte) (amount & 0xFF);
         dataIn[9] = time[0];
         dataIn[10] = time[1];
-        // dataIn[11]..dataIn[7+sigLen] will be filled in at the finalization phase.
+        // dataIn[11]..dataIn[11+7+sigLen] will be filled in at the finalization phase.
         if (extraInfo != null) {
             this.addSubName(extraInfo);
         }
@@ -101,6 +102,7 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
      * <p>
      * 5 or 10 byte signature (hi part)
      *
+     * 
      * @param samId the SAM id
      * @param svPrepareReloadData the data out from the SvPrepareReload SAM command
      */
@@ -118,8 +120,7 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
         System.arraycopy(svPrepareReloadData, 3, dataIn, 15, 3);
         System.arraycopy(svPrepareReloadData, 6, dataIn, 18, svPrepareReloadData.length - 6);
 
-        this.request =
-                setApduRequest(poClass.getValue(), command, p1, p2, dataIn, null);
+        this.request = setApduRequest(poClass.getValue(), command, p1, p2, dataIn, null);
 
         finalized = true;
     }

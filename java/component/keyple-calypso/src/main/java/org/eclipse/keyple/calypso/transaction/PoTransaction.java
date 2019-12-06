@@ -17,6 +17,7 @@ import org.eclipse.keyple.calypso.command.po.*;
 import org.eclipse.keyple.calypso.command.po.builder.*;
 import org.eclipse.keyple.calypso.command.po.builder.security.AbstractOpenSessionCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.security.CloseSessionCmdBuild;
+import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvDebitCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvGetCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvReloadCmdBuild;
 import org.eclipse.keyple.calypso.command.po.parser.*;
@@ -25,10 +26,7 @@ import org.eclipse.keyple.calypso.command.po.parser.security.CloseSessionRespPar
 import org.eclipse.keyple.calypso.command.sam.AbstractSamCommandBuilder;
 import org.eclipse.keyple.calypso.command.sam.SamRevision;
 import org.eclipse.keyple.calypso.command.sam.builder.security.*;
-import org.eclipse.keyple.calypso.command.sam.parser.security.DigestAuthenticateRespPars;
-import org.eclipse.keyple.calypso.command.sam.parser.security.DigestCloseRespPars;
-import org.eclipse.keyple.calypso.command.sam.parser.security.SamGetChallengeRespPars;
-import org.eclipse.keyple.calypso.command.sam.parser.security.SvPrepareLoadRespPars;
+import org.eclipse.keyple.calypso.command.sam.parser.security.*;
 import org.eclipse.keyple.calypso.transaction.exception.*;
 import org.eclipse.keyple.core.command.AbstractApduCommandBuilder;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
@@ -2060,9 +2058,8 @@ public final class PoTransaction {
         /*
          * create and keep the PoBuilderParser, return the command index
          */
-        return poCommandsManager.addStoredValueCommand(
-                new SvGetCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(), svOperation, extraInfo),
-                svOperation);
+        return poCommandsManager.addStoredValueCommand(new SvGetCmdBuild(calypsoPo.getPoClass(),
+                calypsoPo.getRevision(), svOperation, extraInfo), svOperation);
     }
 
     /**
@@ -2080,11 +2077,11 @@ public final class PoTransaction {
      */
     public int prepareSvReload(int amount, byte[] date, byte[] time, byte[] free, String extraInfo)
             throws KeypleReaderException {
-
-
         // create the initial builder with the application data
-        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(),
-                amount, poCommandsManager.getSvGetResponseParser().getCurrentKVC(), date, time, free, extraInfo);
+        SvReloadCmdBuild svReloadCmdBuild =
+                new SvReloadCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(), amount,
+                        poCommandsManager.getSvGetResponseParser().getCurrentKVC(), date, time,
+                        free, extraInfo);
 
         // get the complementary data from the SAM
         SvPrepareLoadCmdBuild svPrepareLoadCmdBuild = new SvPrepareLoadCmdBuild(samRevision,
@@ -2110,8 +2107,8 @@ public final class PoTransaction {
         SeResponse samSeResponse = samReader.transmit(samSeRequest);
 
         // create a parser
-        SvPrepareLoadRespPars svPrepareLoadRespPars =
-                new SvPrepareLoadRespPars(samSeResponse.getApduResponses().get(svPrepareLoadCmdIndex));
+        SvPrepareLoadRespPars svPrepareLoadRespPars = new SvPrepareLoadRespPars(
+                samSeResponse.getApduResponses().get(svPrepareLoadCmdIndex));
 
         // finalize the SvReload command builder with the data provided by the SAM
         svReloadCmdBuild.finalizeBuilder(calypsoSam.getSerialNumber(),
@@ -2128,13 +2125,14 @@ public final class PoTransaction {
      * <p>
      * Note: the key used is the reload key
      *
-     * @param amount the value to be reloaded, positive or negative integer in the range 0..8388608
+     * @param amount the value to be reloaded, positive integer in the range 0..8388608
      * @param date 2-byte free value
      * @param time 2-byte free value
+     * @param free 2-byte free value
      * @param extraInfo extra information included in the logs (can be null or empty)
      * @return the command index
      */
-    public int prepareSvUnreload(int amount, byte[] date, byte[] time, String extraInfo) {
+    public int prepareSvUnreload(int amount, byte[] date, byte[] time, byte[] free, String extraInfo) {
         return 0;
     }
 
@@ -2154,8 +2152,48 @@ public final class PoTransaction {
      *         negative balance is not allowed in the settings.
      */
     public int prepareSvDebit(int amount, byte[] date, byte[] time, String extraInfo)
-            throws KeypleCalypsoNegativeSvBalanceException {
-        return 0;
+            throws KeypleCalypsoNegativeSvBalanceException, KeypleReaderException  {
+        // create the initial builder with the application data
+        SvDebitCmdBuild svDebitCmdBuild =
+                new SvDebitCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(), amount,
+                        poCommandsManager.getSvGetResponseParser().getCurrentKVC(), date, time,
+                        extraInfo);
+
+        // get the complementary data from the SAM
+        SvPrepareDebitCmdBuild svPrepareDebitCmdBuild = new SvPrepareDebitCmdBuild(samRevision,
+                poCommandsManager.getSvGetResponseParser(), svDebitCmdBuild);
+
+        List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
+        int svPrepareDebitCmdIndex;
+        if (!isDiversificationDone) {
+            AbstractApduCommandBuilder selectDiversifier =
+                    new SelectDiversifierCmdBuild(this.samRevision, poCalypsoInstanceSerial);
+            samApduRequestList.add(selectDiversifier.getApduRequest());
+            isDiversificationDone = true;
+            svPrepareDebitCmdIndex = 1;
+        } else {
+            svPrepareDebitCmdIndex = 0;
+        }
+        samApduRequestList.add(svPrepareDebitCmdBuild.getApduRequest());
+
+        // build a SAM SeRequest
+        SeRequest samSeRequest = new SeRequest(samApduRequestList);
+
+        // execute the command
+        SeResponse samSeResponse = samReader.transmit(samSeRequest);
+
+        // create a parser
+        SvPrepareDebitRespPars svPrepareDebitRespPars = new SvPrepareDebitRespPars(
+                samSeResponse.getApduResponses().get(svPrepareDebitCmdIndex));
+
+        // finalize the SvReload command builder with the data provided by the SAM
+        svDebitCmdBuild.finalizeBuilder(calypsoSam.getSerialNumber(),
+                svPrepareDebitRespPars.getApduResponse().getDataOut());
+
+        /*
+         * create and keep the PoBuilderParser, return the command index
+         */
+        return poCommandsManager.addStoredValueCommand(svDebitCmdBuild, SvOperation.DEBIT);
     }
 
     /**

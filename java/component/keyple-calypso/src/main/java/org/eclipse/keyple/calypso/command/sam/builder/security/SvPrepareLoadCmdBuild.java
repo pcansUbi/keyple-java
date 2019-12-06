@@ -42,7 +42,7 @@ public class SvPrepareLoadCmdBuild extends AbstractSamCommandBuilder {
         byte p1 = (byte) 0x01;
         byte p2 = (byte) 0xFF;
         int svGetDataLength = svGetRespPars.getApduResponse().getBytes().length;
-        byte[] data = new byte[19 + svGetDataLength];
+        byte[] data = new byte[19 + svGetDataLength]; // header(4) + SvReload data (15) = 19 bytes
 
         System.arraycopy(svGetRespPars.getSvGetCommandHeader(), 0, data, 0, 4);
         System.arraycopy(svGetRespPars.getApduResponse().getBytes(), 0, data, 4, svGetDataLength);
