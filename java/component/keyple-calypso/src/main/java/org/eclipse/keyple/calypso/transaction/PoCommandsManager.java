@@ -14,10 +14,10 @@ package org.eclipse.keyple.calypso.transaction;
 import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.keyple.calypso.command.po.AbstractPoCommandBuilder;
+import org.eclipse.keyple.calypso.command.po.AbstractPoResponseParser;
 import org.eclipse.keyple.calypso.command.po.PoBuilderParser;
 import org.eclipse.keyple.calypso.command.po.builder.*;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvGetCmdBuild;
-import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,10 +39,13 @@ public class PoCommandsManager {
     private int preparedCommandIndex;
     private boolean preparedCommandsProcessed;
     private int svGetIndex;
+    private int svOpIndex;
     private SvOperation svOperation = SvOperation.NONE;
+    private boolean svOperationPending;
 
     PoCommandsManager() {
         preparedCommandsProcessed = true;
+        svOperationPending = false;
         svGetIndex = -1;
     }
 
@@ -97,9 +100,6 @@ public class PoCommandsManager {
         // check some logic around the SV commands
         if (commandBuilder instanceof SvGetCmdBuild) {
             // SvGet
-            if (this.svOperation != SvOperation.NONE) {
-                throw new IllegalStateException("Only one SV operation per session is allowed.");
-            }
             svGetIndex = preparedCommandIndex;
         } else {
             // SvReload, SvDebit or SvUndebit
@@ -115,6 +115,8 @@ public class PoCommandsManager {
                         svOperation);
                 throw new IllegalStateException("Inconsistent SV operation.");
             }
+            svOpIndex = preparedCommandIndex;
+            svOperationPending = true;
         }
         this.svOperation = svOperation;
 
@@ -132,6 +134,15 @@ public class PoCommandsManager {
      */
     void notifyCommandsProcessed() {
         preparedCommandsProcessed = true;
+    }
+
+    /**
+     * Indicates whether an SV (Reload/Debit) operation has been requested
+     * 
+     * @return true if a reload or debit command has been requested
+     */
+    public boolean isSvOperationPending() {
+        return svOperationPending;
     }
 
     /**
@@ -161,10 +172,19 @@ public class PoCommandsManager {
      * 
      * @return the parser
      */
-    public SvGetRespPars getSvGetResponseParser() {
+    public AbstractPoResponseParser getSvGetResponseParser() {
         if (svGetIndex != poBuilderParserList.size() - 1) {
             throw new IllegalStateException("No SvGet builder is available");
         }
-        return (SvGetRespPars) poBuilderParserList.get(svGetIndex).getResponseParser();
+        return poBuilderParserList.get(svGetIndex).getResponseParser();
+    }
+
+    /**
+     * Returns the Sv operation parser (reload, debit, undebit)
+     *
+     * @return the parser
+     */
+    public AbstractPoResponseParser getSvOperationResponseParser() {
+        return poBuilderParserList.get(svOpIndex).getResponseParser();
     }
 }

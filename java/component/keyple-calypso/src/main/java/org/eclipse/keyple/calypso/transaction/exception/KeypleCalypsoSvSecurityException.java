@@ -14,10 +14,10 @@ package org.eclipse.keyple.calypso.transaction.exception;
 import org.eclipse.keyple.core.seproxy.exception.KeypleReaderException;
 
 /**
- * Thrown when the current SV operation fails
+ * Thrown when the current SV operation fails due to a security issue
  */
-public class KeypleCalypsoNegativeSvBalanceException extends KeypleReaderException {
-    public KeypleCalypsoNegativeSvBalanceException(String message) {
+public class KeypleCalypsoSvSecurityException extends KeypleReaderException {
+    public KeypleCalypsoSvSecurityException(String message) {
         super(message);
     }
 }

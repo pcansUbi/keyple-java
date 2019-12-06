@@ -34,9 +34,8 @@ public class SvReloadCmdBuildTest {
     @Test(expected = IllegalStateException.class)
     public void svReloadCmdBuild_mode_compat_not_finalized() {
         SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_1,
-                /* amount */ 1, /* KVC */ (byte) 0xAA,
-                /* date */ ByteArrayUtil.fromHex("1122"), /* time */ ByteArrayUtil.fromHex("3344"),
-                /* free */ ByteArrayUtil.fromHex("F3EE"),
+                /* amount */ 1, /* KVC */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("3344"), /* free */ ByteArrayUtil.fromHex("F3EE"),
                 new Exception().getStackTrace()[0].getMethodName());
         String apdu = ByteArrayUtil.toHex(svReloadCmdBuild.getApduRequest().getBytes());
     }
@@ -100,9 +99,8 @@ public class SvReloadCmdBuildTest {
     @Test(expected = IllegalStateException.class)
     public void svReloadCmdBuild_mode_rev3_2_not_finalized() {
         SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_2,
-                /* amount */ 1, /* KVC */ (byte) 0xAA,
-                /* date */ ByteArrayUtil.fromHex("1122"), /* time */ ByteArrayUtil.fromHex("3344"),
-                /* free */ ByteArrayUtil.fromHex("F3EE"),
+                /* amount */ 1, /* KVC */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("3344"), /* free */ ByteArrayUtil.fromHex("F3EE"),
                 new Exception().getStackTrace()[0].getMethodName());
         String apdu = ByteArrayUtil.toHex(svReloadCmdBuild.getApduRequest().getBytes());
     }

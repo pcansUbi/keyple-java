@@ -126,7 +126,7 @@ public final class SvDebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRespP
     public byte[] getSvDebitData() {
         byte[] svDebitData = new byte[12];
         svDebitData[0] = command.getInstructionByte();
-        // svReloadData[1,2] / P1P2 not set because ignored
+        // svDebitData[1,2] / P1P2 not set because ignored
         // Lc is 5 bytes longer in revision 3.2
         svDebitData[3] = poRevision == PoRevision.REV3_2 ? (byte) 0x19 : (byte) 0x14;
         // appends the fixed part of dataIn

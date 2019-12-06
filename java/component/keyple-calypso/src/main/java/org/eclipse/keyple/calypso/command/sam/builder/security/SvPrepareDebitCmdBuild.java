@@ -33,7 +33,8 @@ SvPrepareDebitCmdBuild extends AbstractSamCommandBuilder {
      * @param svGetRespPars the SV get response parser
      * @param svDebitCmdBuild the SV debit command builder
      */
-    public SvPrepareDebitCmdBuild(SamRevision samRevision, SvGetRespPars svGetRespPars, SvDebitCmdBuild svDebitCmdBuild) {
+    public SvPrepareDebitCmdBuild(SamRevision samRevision, SvGetRespPars svGetRespPars,
+            SvDebitCmdBuild svDebitCmdBuild) {
         super(command, null);
 
         byte cla = samRevision.getClassByte();
