@@ -2153,6 +2153,13 @@ public final class PoTransaction {
         return poCommandsManager.addStoredValueCommand(svReloadCmdBuild, SvOperation.RELOAD);
     }
 
+    /**
+     * {@link SvAction } indicates the type of action:
+     * <ul>
+     *     <li>Reload: DO loads a positive amount, UNDO loads a negative amount
+     *     <li>Debit: DO debits a positive amount, UNDO cancels, totally or partially, a previous debit.
+     * </ul>>
+     */
     public enum SvAction {
         DO, UNDO
     }
