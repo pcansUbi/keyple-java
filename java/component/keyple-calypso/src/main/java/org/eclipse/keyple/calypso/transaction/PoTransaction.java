@@ -168,6 +168,8 @@ public final class PoTransaction {
 
         poCommandsManager = new PoCommandsManager();
 
+        transactionResult = true;
+
         setLastError("No error");
     }
 
@@ -915,12 +917,12 @@ public final class PoTransaction {
      * @return the {@link PoTransaction}.transactionResult
      */
     public boolean isSuccessful() {
-
-        if (sessionState != SessionState.SESSION_CLOSED) {
-            throw new IllegalStateException(
-                    "Session is not closed, state:" + sessionState.toString() + ", expected: "
-                            + SessionState.SESSION_OPEN.toString());
-        }
+        // TODO add checks
+        // if (sessionState != SessionState.SESSION_CLOSED) {
+        // throw new IllegalStateException(
+        // "Session is not closed, state:" + sessionState.toString() + ", expected: "
+        // + SessionState.SESSION_OPEN.toString());
+        // }
 
         return transactionResult;
     }

@@ -15,10 +15,7 @@ package org.eclipse.keyple.example.calypso.pc.usecase6;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Scanner;
-import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvDebitRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
-import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvReloadRespPars;
-import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvUndebitRespPars;
 import org.eclipse.keyple.calypso.transaction.*;
 import org.eclipse.keyple.core.selection.MatchingSelection;
 import org.eclipse.keyple.core.selection.SeSelection;
@@ -194,9 +191,11 @@ public class StoredValue_Pcsc {
                     free, "SvReload: +" + amount);
 
             if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
-                logger.info("Reload operation successful.");
-                SvReloadRespPars svReloadRespPars =
-                        ((SvReloadRespPars) poTransaction.getResponseParser(svReloadIndex));
+                if (poTransaction.isSuccessful()) {
+                    logger.info("Reload operation successful.");
+                } else {
+                    logger.error("Reload operation failed: ", poTransaction.getLastError());
+                }
                 return true;
             }
         }
@@ -239,13 +238,10 @@ public class StoredValue_Pcsc {
                     "SvDebit: +" + amount);
 
             if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
-                logger.info("Debit operation successful.");
-                if (svAction == PoTransaction.SvAction.DO) {
-                    SvDebitRespPars svDebitRespPars =
-                            ((SvDebitRespPars) poTransaction.getResponseParser(svDebitIndex));
+                if (poTransaction.isSuccessful()) {
+                    logger.info("Debit operation successful.");
                 } else {
-                    SvUndebitRespPars svUndebitRespPars =
-                            ((SvUndebitRespPars) poTransaction.getResponseParser(svDebitIndex));
+                    logger.error("Debit operation failed: ", poTransaction.getLastError());
                 }
                 return true;
             }
