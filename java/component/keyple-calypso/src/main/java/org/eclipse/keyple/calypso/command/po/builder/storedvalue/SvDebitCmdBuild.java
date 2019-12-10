@@ -15,11 +15,13 @@ package org.eclipse.keyple.calypso.command.po.builder.storedvalue;
 import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.*;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvDebitRespPars;
+import org.eclipse.keyple.core.seproxy.message.ApduRequest;
 import org.eclipse.keyple.core.seproxy.message.ApduResponse;
 
 /**
  * The Class SvDebitCmdBuild. This class provides the dedicated constructor to build the SV Debit
- * command.
+ * command. Note: {@link SvDebitCmdBuild} and {@link SvUndebitCmdBuild} shares the same parser
+ * {@link SvDebitRespPars}
  */
 public final class SvDebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRespPars>
         implements PoSendableInSession, PoModificationCommand {
@@ -137,5 +139,13 @@ public final class SvDebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRespP
     @Override
     public SvDebitRespPars createResponseParser(ApduResponse apduResponse) {
         return new SvDebitRespPars(apduResponse);
+    }
+
+    @Override
+    public ApduRequest getApduRequest() {
+        if (!finalized) {
+            throw new IllegalStateException("The builder has not been finalized");
+        }
+        return super.getApduRequest();
     }
 }
