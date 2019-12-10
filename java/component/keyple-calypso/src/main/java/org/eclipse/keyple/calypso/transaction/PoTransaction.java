@@ -115,6 +115,7 @@ public final class PoTransaction {
     private int modificationsCounter;
 
     private final PoCommandsManager poCommandsManager;
+    private String lastError;
 
     /**
      * PoTransaction with PO and SAM readers.
@@ -166,6 +167,8 @@ public final class PoTransaction {
         sessionState = SessionState.SESSION_UNINITIALIZED;
 
         poCommandsManager = new PoCommandsManager();
+
+        setLastError("No error");
     }
 
     /**
@@ -2156,9 +2159,9 @@ public final class PoTransaction {
     /**
      * {@link SvAction } indicates the type of action:
      * <ul>
-     *     <li>Reload: DO loads a positive amount, UNDO loads a negative amount
-     *     <li>Debit: DO debits a positive amount, UNDO cancels, totally or partially, a previous debit.
-     * </ul>>
+     * <li>Reload: DO loads a positive amount, UNDO loads a negative amount
+     * <li>Debit: DO debits a positive amount, UNDO cancels, totally or partially, a previous debit.
+     * </ul>
      */
     public enum SvAction {
         DO, UNDO
@@ -2365,5 +2368,13 @@ public final class PoTransaction {
      */
     public AbstractApduResponseParser getResponseParser(int commandIndex) {
         return poCommandsManager.getResponseParser(commandIndex);
+    }
+
+    private void setLastError(String lastError) {
+        this.lastError = lastError;
+    }
+
+    public String getLastError() {
+        return lastError;
     }
 }
