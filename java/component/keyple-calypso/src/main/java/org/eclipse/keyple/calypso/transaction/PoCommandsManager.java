@@ -40,7 +40,8 @@ class PoCommandsManager {
     private boolean preparedCommandsProcessed;
     private int svGetIndex;
     private int svOpIndex;
-    private SvOperation svOperation = SvOperation.NONE;
+    private SvOperation svOperation;
+    private SvAction svAction = SvAction.DO;
     private boolean svOperationPending;
 
     PoCommandsManager() {
@@ -85,7 +86,8 @@ class PoCommandsManager {
      * @param svOperation the type of SV operation
      * @return the index to retrieve the parser later
      */
-    int addStoredValueCommand(AbstractPoCommandBuilder commandBuilder, SvOperation svOperation) {
+    int addStoredValueCommand(AbstractPoCommandBuilder commandBuilder, SvOperation svOperation,
+            SvAction svAction) {
         /*
          * Reset the list when preparing the first command after the last processing. The builders
          * have remained available until now.
@@ -119,6 +121,7 @@ class PoCommandsManager {
             svOperationPending = true;
         }
         this.svOperation = svOperation;
+        this.svAction = svAction;
 
         // TODO find a way to efficiently mutualize this with the addRegularCommand method
         poBuilderParserList.add(new PoBuilderParser(commandBuilder));
@@ -134,6 +137,13 @@ class PoCommandsManager {
      */
     void notifyCommandsProcessed() {
         preparedCommandsProcessed = true;
+    }
+
+    /**
+     * @return the current {@link SvAction} (default is DO)
+     */
+    public SvAction getSvAction() {
+        return svAction;
     }
 
     /**

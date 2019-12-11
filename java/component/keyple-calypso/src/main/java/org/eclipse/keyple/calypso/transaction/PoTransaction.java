@@ -2079,15 +2079,19 @@ public final class PoTransaction {
      * Prepares an SV operation or simply retrieves the current SV status
      *
      * @param svOperation informs about the nature of the intended operation
-     * @param extraInfo extra information included in the logs (can be null or empty)
+     * @param svAction the type of action: DO a debit or a positive reload, UNDO a undebit a
+     *        negative reload
      * @return the command index
      */
-    public int prepareSvGet(SvOperation svOperation, String extraInfo) {
+    public int prepareSvGet(SvOperation svOperation, SvAction svAction) {
         /*
          * create and keep the PoBuilderParser, return the command index
          */
-        return poCommandsManager.addStoredValueCommand(new SvGetCmdBuild(calypsoPo.getPoClass(),
-                calypsoPo.getRevision(), svOperation, extraInfo), svOperation);
+        return poCommandsManager
+                .addStoredValueCommand(
+                        new SvGetCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(),
+                                svOperation, "SvGet for " + svAction + "/" + svOperation),
+                        svOperation, svAction);
     }
 
     /**
@@ -2155,18 +2159,8 @@ public final class PoTransaction {
         /*
          * create and keep the PoBuilderParser, return the command index
          */
-        return poCommandsManager.addStoredValueCommand(svReloadCmdBuild, SvOperation.RELOAD);
-    }
-
-    /**
-     * {@link SvAction } indicates the type of action:
-     * <ul>
-     * <li>Reload: DO loads a positive amount, UNDO loads a negative amount
-     * <li>Debit: DO debits a positive amount, UNDO cancels, totally or partially, a previous debit.
-     * </ul>
-     */
-    public enum SvAction {
-        DO, UNDO
+        return poCommandsManager.addStoredValueCommand(svReloadCmdBuild, SvOperation.RELOAD,
+                SvAction.DO);
     }
 
     /**
@@ -2174,7 +2168,6 @@ public final class PoTransaction {
      * <p>
      * Note: the key used is the reload key
      *
-     * @param action the type of action: DO to increment the balance, UNDO to decrement the balance
      * @param amount the value to be reloaded, positive integer in the range 0..8388607 for a DO
      *        action, in the range 0..8388608 for an UNDO action.
      * @param date 2-byte free value
@@ -2185,12 +2178,30 @@ public final class PoTransaction {
      * @throws KeypleCalypsoSvSecurityException in case of security issue
      * @throws KeypleReaderException in case of failure during the SAM communication
      */
-    public int prepareSvReload(SvAction action, int amount, byte[] date, byte[] time, byte[] free,
-            String extraInfo) throws KeypleCalypsoSvSecurityException, KeypleReaderException {
-        if (SvAction.UNDO.equals(action)) {
+    public int prepareSvReload(int amount, byte[] date, byte[] time, byte[] free, String extraInfo)
+            throws KeypleCalypsoSvSecurityException, KeypleReaderException {
+        if (SvAction.UNDO.equals(poCommandsManager.getSvAction())) {
             amount = -amount;
         }
         return prepareSvReloadPriv(amount, date, time, free, extraInfo);
+    }
+
+    /**
+     * Prepares an SV reload (increasing the current SV balance)
+     * <p>
+     * Note: the key used is the reload key
+     *
+     * @param amount the value to be reloaded, positive integer in the range 0..8388607 for a DO
+     *        action, in the range 0..8388608 for an UNDO action.
+     * @return the command index
+     * @throws KeypleCalypsoSvSecurityException in case of security issue
+     * @throws KeypleReaderException in case of failure during the SAM communication
+     */
+    public int prepareSvReload(int amount)
+            throws KeypleCalypsoSvSecurityException, KeypleReaderException {
+        byte[] zero = {0x00, 0x00};
+        String extraInfo = poCommandsManager.getSvAction().toString() + " debit " + amount;
+        return prepareSvReload(amount, zero, zero, zero, extraInfo);
     }
 
     /**
@@ -2203,8 +2214,8 @@ public final class PoTransaction {
      * @param amount the amount to be subtracted, positive integer in the range 0..32767
      * @param date 2-byte free value
      * @param time 2-byte free value
-     * @return the command index
      * @param extraInfo extra information included in the logs (can be null or empty)
+     * @return the command index
      * @throws KeypleCalypsoSvException if the balance were to turn negative and the negative
      *         balance is not allowed in the settings.
      * @throws KeypleCalypsoSvSecurityException in case of security issue
@@ -2260,7 +2271,8 @@ public final class PoTransaction {
         /*
          * create and keep the PoBuilderParser, return the command index
          */
-        return poCommandsManager.addStoredValueCommand(svDebitCmdBuild, SvOperation.DEBIT);
+        return poCommandsManager.addStoredValueCommand(svDebitCmdBuild, SvOperation.DEBIT,
+                SvAction.DO);
     }
 
     /**
@@ -2273,8 +2285,8 @@ public final class PoTransaction {
      * @param amount the amount to be subtracted, positive integer in the range 0..32767
      * @param date 2-byte free value
      * @param time 2-byte free value
-     * @return the command index
      * @param extraInfo extra information included in the logs (can be null or empty)
+     * @return the command index
      * @throws KeypleCalypsoSvSecurityException in case of security issue
      * @throws KeypleReaderException in case of failure during the SAM communication TODO add
      *         specific exception
@@ -2330,7 +2342,8 @@ public final class PoTransaction {
         /*
          * create and keep the PoBuilderParser, return the command index
          */
-        return poCommandsManager.addStoredValueCommand(svUndebitCmdBuild, SvOperation.UNDEBIT);
+        return poCommandsManager.addStoredValueCommand(svUndebitCmdBuild, SvOperation.UNDEBIT,
+                SvAction.UNDO);
     }
 
     /**
@@ -2341,25 +2354,47 @@ public final class PoTransaction {
      * <p>
      * Note: the key used is the debit key
      *
-     * @param action the type of action: DO to decrement the balance, UNDO to cancel a previous
-     *        debit
      * @param amount the amount to be subtracted or added, positive integer in the range 0..32767
-     *        when substracted and 0..32768 when added.
+     *        when subtracted and 0..32768 when added.
      * @param date 2-byte free value
      * @param time 2-byte free value
-     * @return the command index
      * @param extraInfo extra information included in the logs (can be null or empty)
+     * @return the command index
      * @throws KeypleCalypsoSvException if the balance were to turn negative and the negative
      *         balance is not allowed in the settings.
      * @throws KeypleReaderException in case of failure during the SAM communication
      */
-    public int prepareSvDebit(SvAction action, int amount, byte[] date, byte[] time,
-            String extraInfo) throws KeypleCalypsoSvException, KeypleReaderException {
-        if (SvAction.DO.equals(action)) {
+    public int prepareSvDebit(int amount, byte[] date, byte[] time, String extraInfo)
+            throws KeypleCalypsoSvException, KeypleReaderException {
+        if (SvAction.DO.equals(poCommandsManager.getSvAction())) {
             return prepareSvDebitPriv(amount, date, time, extraInfo);
         } else {
             return prepareSvUndebitPriv(amount, date, time, extraInfo);
         }
+    }
+
+    /**
+     * Prepares an SV debit or Undebit (partially or totally cancels the last SV debit command).
+     * <p>
+     * It consists in decreasing the current balance of the SV by a certain amount or canceling a
+     * previous debit.
+     * <p>
+     * The information fields such as date and time are set to 0. The extraInfo field propagated in
+     * Logs are automatically generated with the type of transaction and amount.
+     * <p>
+     * Note: the key used is the debit key
+     *
+     * @param amount the amount to be subtracted or added, positive integer in the range 0..32767
+     *        when subtracted and 0..32768 when added.
+     * @return the command index
+     * @throws KeypleCalypsoSvException if the balance were to turn negative and the negative
+     *         balance is not allowed in the settings.
+     * @throws KeypleReaderException in case of failure during the SAM communication
+     */
+    public int prepareSvDebit(int amount) throws KeypleCalypsoSvException, KeypleReaderException {
+        byte[] zero = {0x00, 0x00};
+        String extraInfo = poCommandsManager.getSvAction().toString() + " debit " + amount;
+        return prepareSvDebit(amount, zero, zero, extraInfo);
     }
 
     /**
