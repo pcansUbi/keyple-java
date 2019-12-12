@@ -47,11 +47,10 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
      * @param date debit date (not checked by the PO)
      * @param time debit time (not checked by the PO)
      * @param free 2 free bytes stored in the log but not processed by the PO
-     * @param extraInfo extra information included in the logs (can be null or empty)
      * @throws IllegalArgumentException - if the command is inconsistent
      */
     public SvReloadCmdBuild(PoClass poClass, PoRevision poRevision, int amount, byte kvc,
-            byte[] date, byte[] time, byte[] free, String extraInfo) {
+            byte[] date, byte[] time, byte[] free) {
         super(command, null);
 
         if (amount < -8388608 || amount > 8388607) {
@@ -85,9 +84,6 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
         dataIn[9] = time[0];
         dataIn[10] = time[1];
         // dataIn[11]..dataIn[11+7+sigLen] will be filled in at the finalization phase.
-        if (extraInfo != null) {
-            this.addSubName(extraInfo);
-        }
     }
 
     /**
@@ -105,8 +101,9 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
      * 
      * @param samId the SAM id
      * @param svPrepareReloadData the data out from the SvPrepareReload SAM command
+     * @param extraInfo extra information included in the logs (can be null or empty)
      */
-    public void finalizeBuilder(byte[] samId, byte[] svPrepareReloadData) {
+    public void finalizeBuilder(byte[] samId, byte[] svPrepareReloadData, String extraInfo) {
         if ((poRevision == PoRevision.REV3_2 && svPrepareReloadData.length != 16)
                 || (poRevision != PoRevision.REV3_2 && svPrepareReloadData.length != 11)) {
             throw new IllegalArgumentException("Bad SV prepare load data length.");
@@ -121,6 +118,9 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
         System.arraycopy(svPrepareReloadData, 6, dataIn, 18, svPrepareReloadData.length - 6);
 
         this.request = setApduRequest(poClass.getValue(), command, p1, p2, dataIn, null);
+        if (extraInfo != null) {
+            this.addSubName(extraInfo);
+        }
 
         finalized = true;
     }

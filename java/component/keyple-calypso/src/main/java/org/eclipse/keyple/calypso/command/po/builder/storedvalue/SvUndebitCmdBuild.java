@@ -43,11 +43,10 @@ public final class SvUndebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRes
      * @param kvc the KVC
      * @param date debit date (not checked by the PO)
      * @param time debit time (not checked by the PO)
-     * @param extraInfo extra information included in the logs (can be null or empty)
      * @throws IllegalArgumentException - if the command is inconsistent
      */
     public SvUndebitCmdBuild(PoClass poClass, PoRevision poRevision, int amount, byte kvc,
-            byte[] date, byte[] time, String extraInfo) {
+            byte[] date, byte[] time) {
         super(command, null);
 
         if (amount < 0 || amount > 32768) {
@@ -79,9 +78,6 @@ public final class SvUndebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRes
         dataIn[6] = time[1];
         dataIn[7] = kvc;
         // dataIn[8]..dataIn[8+7+sigLen] will be filled in at the finalization phase.
-        if (extraInfo != null) {
-            this.addSubName(extraInfo);
-        }
     }
 
 
@@ -100,8 +96,9 @@ public final class SvUndebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRes
      *
      * @param samId the SAM id
      * @param svPrepareUndebitData the data out from the SvPrepareDebit SAM command
+     * @param extraInfo extra information included in the logs (can be null or empty)
      */
-    public void finalizeBuilder(byte[] samId, byte[] svPrepareUndebitData) {
+    public void finalizeBuilder(byte[] samId, byte[] svPrepareUndebitData, String extraInfo) {
         if ((poRevision == PoRevision.REV3_2 && svPrepareUndebitData.length != 16)
                 || (poRevision != PoRevision.REV3_2 && svPrepareUndebitData.length != 11)) {
             throw new IllegalArgumentException("Bad SV prepare load data length.");
@@ -116,6 +113,9 @@ public final class SvUndebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRes
         System.arraycopy(svPrepareUndebitData, 6, dataIn, 15, svPrepareUndebitData.length - 6);
 
         this.request = setApduRequest(poClass.getValue(), command, p1, p2, dataIn, null);
+        if (extraInfo != null) {
+            this.addSubName(extraInfo);
+        }
 
         finalized = true;
     }
