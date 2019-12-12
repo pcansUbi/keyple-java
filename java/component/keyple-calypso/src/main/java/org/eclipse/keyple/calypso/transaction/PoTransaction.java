@@ -255,7 +255,7 @@ public final class PoTransaction {
         /* Build a SAM SeRequest */
         SeRequest samSeRequest = new SeRequest(samApduRequestList);
 
-        logger.debug("processAtomicOpening => identification: SAMSEREQUEST = {}", samSeRequest);
+        logger.trace("processAtomicOpening => identification: SAMSEREQUEST = {}", samSeRequest);
 
         /*
          * Transmit the SeRequest to the SAM and get back the SeResponse (list of ApduResponse)
@@ -268,7 +268,7 @@ public final class PoTransaction {
                     null);
         }
 
-        logger.debug("processAtomicOpening => identification: SAMSERESPONSE = {}", samSeResponse);
+        logger.trace("processAtomicOpening => identification: SAMSERESPONSE = {}", samSeResponse);
 
         List<ApduResponse> samApduResponseList = samSeResponse.getApduResponses();
         byte[] sessionTerminalChallenge;
@@ -309,12 +309,12 @@ public final class PoTransaction {
         /* Create a SeRequest from the ApduRequest list, PO AID as Selector, keep channel open */
         SeRequest poSeRequest = new SeRequest(poApduRequestList);
 
-        logger.debug("processAtomicOpening => opening:  POSEREQUEST = {}", poSeRequest);
+        logger.trace("processAtomicOpening => opening:  POSEREQUEST = {}", poSeRequest);
 
         /* Transmit the commands to the PO */
         SeResponse poSeResponse = poReader.transmit(poSeRequest);
 
-        logger.debug("processAtomicOpening => opening:  POSERESPONSE = {}", poSeResponse);
+        logger.trace("processAtomicOpening => opening:  POSERESPONSE = {}", poSeResponse);
 
         if (poSeResponse == null) {
             throw new KeypleCalypsoSecureSessionException("Null response received",
@@ -481,12 +481,12 @@ public final class PoTransaction {
          */
         SeRequest poSeRequest = new SeRequest(poApduRequestList);
 
-        logger.debug("processAtomicPoCommands => POREQUEST = {}", poSeRequest);
+        logger.trace("processAtomicPoCommands => POREQUEST = {}", poSeRequest);
 
         /* Transmit the commands to the PO */
         SeResponse poSeResponse = poReader.transmit(poSeRequest, channelControl);
 
-        logger.debug("processAtomicPoCommands => PORESPONSE = {}", poSeResponse);
+        logger.trace("processAtomicPoCommands => PORESPONSE = {}", poSeResponse);
 
         if (poSeResponse == null) {
             throw new KeypleCalypsoSecureSessionException("Null response received",
@@ -676,12 +676,12 @@ public final class PoTransaction {
         /* Get the SAM Digest request from the cache manager */
         SeRequest samSeRequest = DigestProcessor.getSamDigestRequest();
 
-        logger.debug("processAtomicClosing => SAMREQUEST = {}", samSeRequest);
+        logger.trace("processAtomicClosing => SAMREQUEST = {}", samSeRequest);
 
         /* Transmit SeRequest and get SeResponse */
         SeResponse samSeResponse = samReader.transmit(samSeRequest);
 
-        logger.debug("processAtomicClosing => SAMRESPONSE = {}", samSeResponse);
+        logger.trace("processAtomicClosing => SAMRESPONSE = {}", samSeResponse);
 
         if (samSeResponse == null) {
             throw new KeypleCalypsoSecureSessionException("Null response received",
@@ -765,7 +765,7 @@ public final class PoTransaction {
          */
         SeRequest poSeRequest = new SeRequest(poApduRequestList);
 
-        logger.debug("processAtomicClosing => POSEREQUEST = {}", poSeRequest);
+        logger.trace("processAtomicClosing => POSEREQUEST = {}", poSeRequest);
 
         SeResponse poSeResponse;
         try {
@@ -802,7 +802,7 @@ public final class PoTransaction {
                     null);
         }
 
-        logger.debug("processAtomicClosing => POSERESPONSE = {}", poSeResponse);
+        logger.trace("processAtomicClosing => POSERESPONSE = {}", poSeResponse);
 
         List<ApduResponse> poApduResponseList = poSeResponse.getApduResponses();
 
@@ -826,12 +826,12 @@ public final class PoTransaction {
 
         samSeRequest = new SeRequest(samApduRequestList);
 
-        logger.debug("PoTransaction.DigestProcessor => checkPoSignature: SAMREQUEST = {}",
+        logger.trace("PoTransaction.DigestProcessor => checkPoSignature: SAMREQUEST = {}",
                 samSeRequest);
 
         samSeResponse = samReader.transmit(samSeRequest);
 
-        logger.debug("PoTransaction.DigestProcessor => checkPoSignature: SAMRESPONSE = {}",
+        logger.trace("PoTransaction.DigestProcessor => checkPoSignature: SAMRESPONSE = {}",
                 samSeResponse);
 
         if (samSeResponse == null) {
@@ -1094,7 +1094,7 @@ public final class PoTransaction {
          */
         static void pushPoExchangeData(ApduRequest request, ApduResponse response) {
 
-            logger.debug("PoTransaction.DigestProcessor => pushPoExchangeData: REQUEST = {}",
+            logger.trace("PoTransaction.DigestProcessor => pushPoExchangeData: REQUEST = {}",
                     request);
 
             /*
@@ -1109,7 +1109,7 @@ public final class PoTransaction {
                 poDigestDataCache.add(request.getBytes());
             }
 
-            logger.debug("PoTransaction.DigestProcessor => pushPoExchangeData: RESPONSE = {}",
+            logger.trace("PoTransaction.DigestProcessor => pushPoExchangeData: RESPONSE = {}",
                     response);
 
             /* Add an ApduResponse to the digest computation */
@@ -1747,7 +1747,7 @@ public final class PoTransaction {
          */
         SeRequest poSeRequest = new SeRequest(poApduRequestList);
 
-        logger.debug("processCancel => POSEREQUEST = {}", poSeRequest);
+        logger.trace("processCancel => POSEREQUEST = {}", poSeRequest);
 
         SeResponse poSeResponse;
         try {
@@ -1756,7 +1756,7 @@ public final class PoTransaction {
             poSeResponse = ex.getSeResponse();
         }
 
-        logger.debug("processCancel => POSERESPONSE = {}", poSeResponse);
+        logger.trace("processCancel => POSERESPONSE = {}", poSeResponse);
 
         /* sets the flag indicating that the commands have been executed */
         poCommandsManager.notifyCommandsProcessed();
@@ -2090,7 +2090,7 @@ public final class PoTransaction {
         return poCommandsManager
                 .addStoredValueCommand(
                         new SvGetCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(),
-                                svOperation, "SvGet for " + svAction + "/" + svOperation),
+                                svOperation, "for " + svAction + "/" + svOperation),
                         svOperation, svAction);
     }
 
@@ -2115,7 +2115,7 @@ public final class PoTransaction {
         SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(calypsoPo.getPoClass(),
                 calypsoPo.getRevision(), amount,
                 ((SvGetRespPars) poCommandsManager.getSvGetResponseParser()).getCurrentKVC(), date,
-                time, free, extraInfo);
+                time, free);
 
         // get the complementary data from the SAM
         SvPrepareLoadCmdBuild svPrepareLoadCmdBuild = new SvPrepareLoadCmdBuild(samRevision,
@@ -2154,7 +2154,7 @@ public final class PoTransaction {
 
         // finalize the SvReload command builder with the data provided by the SAM
         svReloadCmdBuild.finalizeBuilder(calypsoSam.getSerialNumber(),
-                svPrepareLoadRespPars.getApduResponse().getDataOut());
+                svPrepareLoadRespPars.getApduResponse().getDataOut(), extraInfo);
 
         /*
          * create and keep the PoBuilderParser, return the command index
@@ -2200,7 +2200,7 @@ public final class PoTransaction {
     public int prepareSvReload(int amount)
             throws KeypleCalypsoSvSecurityException, KeypleReaderException {
         byte[] zero = {0x00, 0x00};
-        String extraInfo = poCommandsManager.getSvAction().toString() + " debit " + amount;
+        String extraInfo = poCommandsManager.getSvAction().toString() + " reload " + amount;
         return prepareSvReload(amount, zero, zero, zero, extraInfo);
     }
 
@@ -2227,7 +2227,7 @@ public final class PoTransaction {
         SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(calypsoPo.getPoClass(),
                 calypsoPo.getRevision(), amount,
                 ((SvGetRespPars) poCommandsManager.getSvGetResponseParser()).getCurrentKVC(), date,
-                time, extraInfo);
+                time);
 
         // get the complementary data from the SAM
         SvPrepareDebitCmdBuild svPrepareDebitCmdBuild = new SvPrepareDebitCmdBuild(samRevision,
@@ -2266,7 +2266,7 @@ public final class PoTransaction {
 
         // finalize the SvReload command builder with the data provided by the SAM
         svDebitCmdBuild.finalizeBuilder(calypsoSam.getSerialNumber(),
-                svPrepareDebitRespPars.getApduResponse().getDataOut());
+                svPrepareDebitRespPars.getApduResponse().getDataOut(), extraInfo);
 
         /*
          * create and keep the PoBuilderParser, return the command index
@@ -2297,7 +2297,7 @@ public final class PoTransaction {
         SvUndebitCmdBuild svUndebitCmdBuild = new SvUndebitCmdBuild(calypsoPo.getPoClass(),
                 calypsoPo.getRevision(), amount,
                 ((SvGetRespPars) poCommandsManager.getSvGetResponseParser()).getCurrentKVC(), date,
-                time, extraInfo);
+                time);
 
         // get the complementary data from the SAM
         SvPrepareUndebitCmdBuild svPrepareUndebitCmdBuild = new SvPrepareUndebitCmdBuild(
@@ -2337,7 +2337,7 @@ public final class PoTransaction {
 
         // finalize the SvReload command builder with the data provided by the SAM
         svUndebitCmdBuild.finalizeBuilder(calypsoSam.getSerialNumber(),
-                svPrepareUndebitRespPars.getApduResponse().getDataOut());
+                svPrepareUndebitRespPars.getApduResponse().getDataOut(), extraInfo);
 
         /*
          * create and keep the PoBuilderParser, return the command index

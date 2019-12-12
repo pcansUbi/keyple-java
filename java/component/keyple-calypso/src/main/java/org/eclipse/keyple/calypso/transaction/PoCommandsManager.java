@@ -159,6 +159,12 @@ class PoCommandsManager {
      * @return the current PoBuilderParser list
      */
     public List<PoBuilderParser> getPoBuilderParserList() {
+        // TODO Improve this in the case where no commands are added before closing
+        if (preparedCommandsProcessed) {
+            poBuilderParserList.clear();
+            preparedCommandsProcessed = false;
+            preparedCommandIndex = 0;
+        }
         return poBuilderParserList;
     }
 

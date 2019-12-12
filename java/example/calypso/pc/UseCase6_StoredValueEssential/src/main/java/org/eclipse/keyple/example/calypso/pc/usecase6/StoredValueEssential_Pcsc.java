@@ -13,6 +13,7 @@ package org.eclipse.keyple.example.calypso.pc.usecase6;
 
 
 import java.util.Scanner;
+import org.eclipse.keyple.calypso.command.po.parser.ReadDataStructure;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
 import org.eclipse.keyple.calypso.transaction.*;
 import org.eclipse.keyple.core.selection.MatchingSelection;
@@ -118,6 +119,13 @@ public class StoredValueEssential_Pcsc {
         return false;
     }
 
+    /**
+     * Reload the SV with the provided amount outside a Calypso Session
+     *
+     * @param amount the reloading amount
+     * @return true if the operation is successful, else false
+     * @throws KeypleReaderException
+     */
     private static boolean svReload(int amount) throws KeypleReaderException {
         int svGetIndex = poTransaction.prepareSvGet(SvOperation.RELOAD, SvAction.DO);
 
@@ -144,8 +152,91 @@ public class StoredValueEssential_Pcsc {
         return false;
     }
 
+    /**
+     * Reload the SV with the provided amount inside a Calypso Session
+     *
+     * @param amount the reloading amount inside a Calypso Session
+     * @return true if the operation is successful, else false
+     * @throws KeypleReaderException
+     */
+    private static boolean svReloadInSession(int amount) throws KeypleReaderException {
+        int readRecordIndex =
+                poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_EnvironmentAndHolder,
+                        ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
+                        29, String.format("EnvironmentAndHolder (SFI=%02X))",
+                                CalypsoClassicInfo.SFI_EnvironmentAndHolder));
 
+        int svGetIndex = poTransaction.prepareSvGet(SvOperation.RELOAD, SvAction.DO);
+
+
+
+        logger.warn("Open session.");
+        if (!poTransaction.processOpening(PoTransaction.ModificationMode.ATOMIC,
+                PoTransaction.SessionAccessLevel.SESSION_LVL_LOAD, (byte) 0, (byte) 0)) {
+            return false;
+        } else {
+            SvGetRespPars svGetRespPars =
+                    ((SvGetRespPars) poTransaction.getResponseParser(svGetIndex));
+            logger.warn("SV balance = {}", svGetRespPars.getBalance());
+            logger.warn("Last reload amount = {}", svGetRespPars.getLoadLog().getAmount());
+        }
+
+        int svReloadIndex = poTransaction.prepareSvReload(amount);
+
+        logger.warn("Close session.");
+        if (poTransaction.processClosing(ChannelControl.CLOSE_AFTER)) {
+            if (poTransaction.isSuccessful()) {
+                logger.warn("Reload operation in session successful.");
+            } else {
+                logger.error("Reload operation failed: ", poTransaction.getLastError());
+            }
+            return true;
+        }
+        logger.error("Reloading the SV balance failed.");
+        return false;
+    }
+
+    /**
+     * Debit the SV with the provided amount
+     *
+     * @param amount the debiting amount outside a Calypso Session
+     * @return true if the operation is successful, else false
+     * @throws KeypleReaderException
+     */
     private static boolean svDebit(int amount) throws KeypleReaderException {
+        int svGetIndex = poTransaction.prepareSvGet(SvOperation.DEBIT, SvAction.DO);
+
+        if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
+            return false;
+        } else {
+            SvGetRespPars svGetRespPars =
+                    ((SvGetRespPars) poTransaction.getResponseParser(svGetIndex));
+            logger.warn("SV balance = {}", svGetRespPars.getBalance());
+            logger.warn("Last debit amount = {}", svGetRespPars.getDebitLog().getAmount());
+        }
+
+        int svDebitIndex = poTransaction.prepareSvDebit(amount);
+
+        if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
+            if (poTransaction.isSuccessful()) {
+                logger.warn("Debit operation successful.");
+            } else {
+                logger.error("Debit operation failed: ", poTransaction.getLastError());
+            }
+            return true;
+        }
+        logger.error("Debiting the SV balance failed.");
+        return false;
+    }
+
+    /**
+     * Debit the SV with the provided amount inside a Calypso Session
+     *
+     * @param amount the debiting amount
+     * @return true if the operation is successful, else false
+     * @throws KeypleReaderException
+     */
+    private static boolean svDebitInSession(int amount) throws KeypleReaderException {
         int svGetIndex;
         svGetIndex = poTransaction.prepareSvGet(SvOperation.DEBIT, SvAction.DO);
 
@@ -162,7 +253,7 @@ public class StoredValueEssential_Pcsc {
 
         if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
             if (poTransaction.isSuccessful()) {
-                logger.warn("Debit operation successful.");
+                logger.warn("Debit operation in qsession successful.");
             } else {
                 logger.error("Debit operation failed: ", poTransaction.getLastError());
             }
@@ -200,26 +291,34 @@ public class StoredValueEssential_Pcsc {
         logger.info("=============== UseCase Calypso #6: Stored Value  ==================");
         logger.info("= PO Reader  NAME = {}", poReader.getName());
         logger.info("= SAM Reader  NAME = {}", samResource.getSeReader().getName());
+
+        Scanner keyboard = new Scanner(System.in);
         boolean loop = true;
 
         while (loop) {
+
+            logger.info("== Calypso Usecase 6 Stored Value ==");
+            logger.info(" 0) View the balance");
+            logger.info(" 1) Reload");
+            logger.info(" 2) Debit");
+            logger.info(" 3) Reload in Calypso Secure session");
+            logger.info(" 4) Debit in Calypso Secure session");
+            logger.info(" 5) Exit");
+            logger.info("Select an SV operation: ");
+            int operation = keyboard.nextInt();
+            if (operation < 0 || operation > 5) {
+                logger.error("Unavailable operation.");
+                continue;
+            }
+
+            if (operation == 5) {
+                logger.warn("Exit on user request.");
+                System.exit(0);
+            }
+
             if (waitAndSelectPo()) {
                 poTransaction = new PoTransaction(poResource, samResource,
                         CalypsoUtilities.getSecuritySettings());
-
-                logger.info("== Calypso Usecase 6 Stored Value ==");
-                logger.info(" 0) View the balance");
-                logger.info(" 1) Reload");
-                logger.info(" 2) Debit");
-                logger.info(" 5) Exit");
-                logger.info("Select an SV operation: ");
-                Scanner keyboard = new Scanner(System.in);
-                int operation = keyboard.nextInt();
-                if (operation < 0 || operation > 5) {
-                    logger.error("Unavailable operation.");
-                    continue;
-                }
-
                 int amount;
 
                 switch (operation) {
@@ -246,6 +345,26 @@ public class StoredValueEssential_Pcsc {
                             logger.error("DO SvDebit raised an exception: {}", e.getMessage());
                         }
                         break;
+                    case 3:
+                        logger.info("Enter the amount to reload in session: ");
+                        amount = keyboard.nextInt();
+                        logger.info("Reload amount = {}", amount);
+                        try {
+                            svReloadInSession(amount);
+                        } catch (KeypleReaderException e) {
+                            logger.error("DO SvReload raised an exception: {}", e.getMessage());
+                        }
+                        break;
+                    case 4:
+                        logger.info("Enter the amount to debit in session: ");
+                        amount = keyboard.nextInt();
+                        logger.info("Debit amount = {}", amount);
+                        try {
+                            svDebitInSession(amount);
+                        } catch (KeypleReaderException e) {
+                            logger.error("DO SvDebit raised an exception: {}", e.getMessage());
+                        }
+                        break;
                     case 5:
                         logger.warn("Exiting programm...");
                         loop = false;
@@ -263,6 +382,5 @@ public class StoredValueEssential_Pcsc {
                 // }
             }
         }
-        System.exit(0);
     }
 }
