@@ -12,6 +12,8 @@
 package org.eclipse.keyple.calypso.transaction;
 
 import java.util.*;
+
+import org.eclipse.keyple.calypso.SamCommandsProcessor;
 import org.eclipse.keyple.calypso.command.CalypsoBuilderParser;
 import org.eclipse.keyple.calypso.command.po.*;
 import org.eclipse.keyple.calypso.command.po.builder.*;
@@ -77,6 +79,8 @@ public final class PoTransaction {
 
     /** The reader for PO. */
     private final ProxyReader poReader;
+    /** The SAM commands processor */
+    private SamCommandsProcessor samCommandsProcessor;
     /** The reader for session SAM. */
     private ProxyReader samReader;
     /** The SAM default revision. */
@@ -133,6 +137,8 @@ public final class PoTransaction {
             SecuritySettings securitySettings) {
 
         this(poResource);
+
+        samCommandsProcessor = new SamCommandsProcessor(samResource, poResource, securitySettings);
 
         samReader = (ProxyReader) samResource.getSeReader();
         calypsoSam = (CalypsoSam) samResource.getMatchingSe();
