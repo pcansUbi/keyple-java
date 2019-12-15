@@ -94,23 +94,23 @@ public final class SvDebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRespP
      * 5 or 10 byte signature (hi part)
      *
      * 
-     * @param samId the SAM id
-     * @param svPrepareDebitData the data out from the SvPrepareDebit SAM command
+     * @param debitComplementaryData the data out from the SvPrepareDebit SAM command
      * @param extraInfo extra information included in the logs (can be null or empty)
      */
-    public void finalizeBuilder(byte[] samId, byte[] svPrepareDebitData, String extraInfo) {
-        if ((poRevision == PoRevision.REV3_2 && svPrepareDebitData.length != 16)
-                || (poRevision != PoRevision.REV3_2 && svPrepareDebitData.length != 11)) {
+    public void finalizeBuilder(byte[] debitComplementaryData, String extraInfo) {
+        if ((poRevision == PoRevision.REV3_2 && debitComplementaryData.length != 20)
+                || (poRevision != PoRevision.REV3_2 && debitComplementaryData.length != 15)) {
             throw new IllegalArgumentException("Bad SV prepare load data length.");
         }
 
-        byte p1 = svPrepareDebitData[0];
-        byte p2 = svPrepareDebitData[1];
+        byte p1 = debitComplementaryData[4];
+        byte p2 = debitComplementaryData[5];
 
-        dataIn[0] = svPrepareDebitData[2];
-        System.arraycopy(samId, 0, dataIn, 8, 4);
-        System.arraycopy(svPrepareDebitData, 3, dataIn, 12, 3);
-        System.arraycopy(svPrepareDebitData, 6, dataIn, 15, svPrepareDebitData.length - 6);
+        dataIn[0] = debitComplementaryData[6];
+        System.arraycopy(debitComplementaryData, 0, dataIn, 8, 4);
+        System.arraycopy(debitComplementaryData, 7, dataIn, 12, 3);
+        System.arraycopy(debitComplementaryData, 10, dataIn, 15,
+                debitComplementaryData.length - 10);
 
         this.request = setApduRequest(poClass.getValue(), command, p1, p2, dataIn, null);
         if (extraInfo != null) {

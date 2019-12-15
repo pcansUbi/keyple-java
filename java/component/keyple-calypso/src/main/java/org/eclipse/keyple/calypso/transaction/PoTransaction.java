@@ -12,8 +12,6 @@
 package org.eclipse.keyple.calypso.transaction;
 
 import java.util.*;
-
-import org.eclipse.keyple.calypso.SamCommandsProcessor;
 import org.eclipse.keyple.calypso.command.CalypsoBuilderParser;
 import org.eclipse.keyple.calypso.command.po.*;
 import org.eclipse.keyple.calypso.command.po.builder.*;
@@ -27,8 +25,6 @@ import org.eclipse.keyple.calypso.command.po.parser.*;
 import org.eclipse.keyple.calypso.command.po.parser.security.AbstractOpenSessionRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.security.CloseSessionRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
-import org.eclipse.keyple.calypso.command.sam.AbstractSamCommandBuilder;
-import org.eclipse.keyple.calypso.command.sam.SamRevision;
 import org.eclipse.keyple.calypso.command.sam.builder.security.*;
 import org.eclipse.keyple.calypso.command.sam.parser.security.*;
 import org.eclipse.keyple.calypso.transaction.exception.*;
@@ -56,24 +52,17 @@ import org.slf4j.LoggerFactory;
 public final class PoTransaction {
 
     /* private constants */
-    private final static byte KIF_UNDEFINED = (byte) 0xFF;
-
-    private final static byte CHALLENGE_LENGTH_REV_INF_32 = (byte) 0x04;
-    private final static byte CHALLENGE_LENGTH_REV32 = (byte) 0x08;
-    private final static byte SIGNATURE_LENGTH_REV_INF_32 = (byte) 0x04;
-    private final static byte SIGNATURE_LENGTH_REV32 = (byte) 0x08;
-
-    private final static int OFFSET_CLA = 0;
-    private final static int OFFSET_INS = 1;
-    private final static int OFFSET_P1 = 2;
-    private final static int OFFSET_P2 = 3;
-    private final static int OFFSET_Lc = 4;
-    private final static int OFFSET_DATA = 5;
+    private static final int OFFSET_CLA = 0;
+    private static final int OFFSET_INS = 1;
+    private static final int OFFSET_P1 = 2;
+    private static final int OFFSET_P2 = 3;
+    private static final int OFFSET_Lc = 4;
+    private static final int OFFSET_DATA = 5;
 
     /** Ratification command APDU for rev <= 2.4 */
-    private final static byte[] ratificationCmdApduLegacy = ByteArrayUtil.fromHex("94B2000000");
+    private static final byte[] ratificationCmdApduLegacy = ByteArrayUtil.fromHex("94B2000000");
     /** Ratification command APDU for rev > 2.4 */
-    private final static byte[] ratificationCmdApdu = ByteArrayUtil.fromHex("00B2000000");
+    private static final byte[] ratificationCmdApdu = ByteArrayUtil.fromHex("00B2000000");
 
     private static final Logger logger = LoggerFactory.getLogger(PoTransaction.class);
 
@@ -81,28 +70,14 @@ public final class PoTransaction {
     private final ProxyReader poReader;
     /** The SAM commands processor */
     private SamCommandsProcessor samCommandsProcessor;
-    /** The reader for session SAM. */
-    private ProxyReader samReader;
-    /** The SAM default revision. */
-    private final SamRevision samRevision = SamRevision.C1;
-    /** The security settings. */
-    private SecuritySettings securitySettings;
-    /** The PO serial number extracted from FCI */
-    private final byte[] poCalypsoInstanceSerial;
     /** The current CalypsoPo */
     private final CalypsoPo calypsoPo;
-    /** The current CalypsoSam */
-    private CalypsoSam calypsoSam;
     /** the type of the notified event. */
     private SessionState sessionState;
-    /** Selected AID of the Calypso PO. */
-    private byte[] poCalypsoInstanceAid;
     /** The PO Calypso Revision. */
     private PoRevision poRevision;
     /** The PO Secure Session final status according to mutual authentication result */
     private boolean transactionResult;
-    /** The diversification status */
-    private boolean isDiversificationDone;
     /** The PO KIF */
     private byte poKif;
     /** The previous PO Secure Session ratification status */
@@ -139,11 +114,6 @@ public final class PoTransaction {
         this(poResource);
 
         samCommandsProcessor = new SamCommandsProcessor(samResource, poResource, securitySettings);
-
-        samReader = (ProxyReader) samResource.getSeReader();
-        calypsoSam = (CalypsoSam) samResource.getMatchingSe();
-
-        this.securitySettings = securitySettings;
     }
 
     /**
@@ -161,14 +131,9 @@ public final class PoTransaction {
 
         poRevision = calypsoPo.getRevision();
 
-        poCalypsoInstanceAid = calypsoPo.getDfName();
-
         modificationsCounterIsInBytes = calypsoPo.isModificationsCounterInBytes();
 
         modificationsCounterMax = modificationsCounter = calypsoPo.getModificationsCounter();
-
-        /* Serial Number of the selected Calypso instance. */
-        poCalypsoInstanceSerial = calypsoPo.getApplicationSerialNumber();
 
         sessionState = SessionState.SESSION_UNINITIALIZED;
 
@@ -221,79 +186,8 @@ public final class PoTransaction {
             byte openingRecordNumberToRead, List<PoBuilderParser> poBuilderParsers)
             throws KeypleReaderException {
 
-        /*
-         * counts 'select diversifier' and 'get challenge' commands. At least get challenge is
-         * present
-         */
-        int numberOfSamCmd = 1;
-
-        /* SAM ApduRequest List to hold Select Diversifier and Get Challenge commands */
-        List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
-
-        if (logger.isDebugEnabled()) {
-            logger.debug("processAtomicOpening => Identification: DFNAME = {}, SERIALNUMBER = {}",
-                    ByteArrayUtil.toHex(poCalypsoInstanceAid),
-                    ByteArrayUtil.toHex(poCalypsoInstanceSerial));
-        }
-        /* diversify only if this has not already been done. */
-        if (!isDiversificationDone) {
-            /* Build the SAM Select Diversifier command to provide the SAM with the PO S/N */
-            AbstractApduCommandBuilder selectDiversifier =
-                    new SelectDiversifierCmdBuild(this.samRevision, poCalypsoInstanceSerial);
-
-            samApduRequestList.add(selectDiversifier.getApduRequest());
-
-            /* increment command number */
-            numberOfSamCmd++;
-
-            /* change the diversification status */
-            isDiversificationDone = true;
-        }
-        /* Build the SAM Get Challenge command */
-        byte challengeLength = poRevision.equals(PoRevision.REV3_2) ? CHALLENGE_LENGTH_REV32
-                : CHALLENGE_LENGTH_REV_INF_32;
-
-        AbstractSamCommandBuilder samGetChallenge =
-                new SamGetChallengeCmdBuild(this.samRevision, challengeLength);
-
-        samApduRequestList.add(samGetChallenge.getApduRequest());
-
-        /* Build a SAM SeRequest */
-        SeRequest samSeRequest = new SeRequest(samApduRequestList);
-
-        logger.trace("processAtomicOpening => identification: SAMSEREQUEST = {}", samSeRequest);
-
-        /*
-         * Transmit the SeRequest to the SAM and get back the SeResponse (list of ApduResponse)
-         */
-        SeResponse samSeResponse = samReader.transmit(samSeRequest);
-
-        if (samSeResponse == null) {
-            throw new KeypleCalypsoSecureSessionException("Null response received",
-                    KeypleCalypsoSecureSessionException.Type.SAM, samSeRequest.getApduRequests(),
-                    null);
-        }
-
-        logger.trace("processAtomicOpening => identification: SAMSERESPONSE = {}", samSeResponse);
-
-        List<ApduResponse> samApduResponseList = samSeResponse.getApduResponses();
-        byte[] sessionTerminalChallenge;
-
-        if (samApduResponseList.size() == numberOfSamCmd
-                && samApduResponseList.get(numberOfSamCmd - 1).isSuccessful() && samApduResponseList
-                        .get(numberOfSamCmd - 1).getDataOut().length == challengeLength) {
-            SamGetChallengeRespPars samChallengePars =
-                    new SamGetChallengeRespPars(samApduResponseList.get(numberOfSamCmd - 1));
-            sessionTerminalChallenge = samChallengePars.getChallenge();
-            if (logger.isDebugEnabled()) {
-                logger.debug("processAtomicOpening => identification: TERMINALCHALLENGE = {}",
-                        ByteArrayUtil.toHex(sessionTerminalChallenge));
-            }
-        } else {
-            throw new KeypleCalypsoSecureSessionException("Invalid message received",
-                    KeypleCalypsoSecureSessionException.Type.SAM, samApduRequestList,
-                    samApduResponseList);
-        }
+        // gets the terminal challenge
+        byte[] sessionTerminalChallenge = samCommandsProcessor.getSessionTerminalChallenge();
 
         /* PO ApduRequest List to hold Open Secure Session and other optional commands */
         List<ApduRequest> poApduRequestList = new ArrayList<ApduRequest>();
@@ -374,30 +268,9 @@ public final class PoTransaction {
                     String.format("%02X", poKvc));
         }
 
-        if (!securitySettings.isAuthorizedKvc(poKvc)) {
+        if (!samCommandsProcessor.isAuthorizedKvc(poKvc)) {
             throw new KeypleCalypsoSecureSessionUnauthorizedKvcException(
                     String.format("PO KVC = %02X", poKvc));
-        }
-
-        byte kif;
-        if (poKif == KIF_UNDEFINED) {
-            switch (accessLevel) {
-                case SESSION_LVL_PERSO:
-                    kif = securitySettings
-                            .getKeyInfo(SecuritySettings.DefaultKeyInfo.SAM_DEFAULT_KIF_PERSO);
-                    break;
-                case SESSION_LVL_LOAD:
-                    kif = securitySettings
-                            .getKeyInfo(SecuritySettings.DefaultKeyInfo.SAM_DEFAULT_KIF_LOAD);
-                    break;
-                case SESSION_LVL_DEBIT:
-                default:
-                    kif = securitySettings
-                            .getKeyInfo(SecuritySettings.DefaultKeyInfo.SAM_DEFAULT_KIF_DEBIT);
-                    break;
-            }
-        } else {
-            kif = poKif;
         }
 
         /* Keep the ratification status and read data */
@@ -405,15 +278,13 @@ public final class PoTransaction {
         openRecordDataRead = poOpenSessionPars.getRecordDataRead();
 
         /*
-         * Initialize the DigestProcessor. It will store all digest operations (Digest Init, Digest
-         * Update) until the session closing. AT this moment, all SAM Apdu will be processed at
+         * Initialize the digest processor. It will store all digest operations (Digest Init, Digest
+         * Update) until the session closing. At this moment, all SAM Apdu will be processed at
          * once.
          */
-        DigestProcessor.initialize(poRevision, samRevision, false, false,
-                poRevision.equals(PoRevision.REV3_2),
-                securitySettings
-                        .getKeyInfo(SecuritySettings.DefaultKeyInfo.SAM_DEFAULT_KEY_RECORD_NUMBER),
-                kif, poKvc, poApduResponseList.get(0).getDataOut());
+        samCommandsProcessor.initializeDigester(accessLevel, false, false,
+                SecuritySettings.DefaultKeyInfo.SAM_DEFAULT_KEY_RECORD_NUMBER, poKif, poKvc,
+                poApduResponseList.get(0).getDataOut());
 
         /*
          * Add all commands data to the digest computation. The first command in the list is the
@@ -424,9 +295,9 @@ public final class PoTransaction {
 
             for (int i = 1; i < poApduRequestList.size(); i++) { // The loop starts after the Open
                 /*
-                 * Add requests and responses to the DigestProcessor
+                 * Add requests and responses to the digest processor
                  */
-                DigestProcessor.pushPoExchangeData(poApduRequestList.get(i),
+                samCommandsProcessor.pushPoExchangeData(poApduRequestList.get(i),
                         poApduResponseList.get(i));
             }
         }
@@ -440,8 +311,8 @@ public final class PoTransaction {
     }
 
     /**
-     * Change SendableInSession List to ApduRequest List .
-     *
+     * Change SendableInSession List to ApduRequest List . TODO rename parameter (SAM)
+     * 
      * @param poOrSamCommandsInsideSession a po or sam commands list to be sent in session
      * @return the ApduRequest list
      */
@@ -535,58 +406,14 @@ public final class PoTransaction {
         if (sessionState == SessionState.SESSION_OPEN) {
             for (int i = 0; i < poApduRequestList.size(); i++) { // The loop starts after the Open
                 /*
-                 * Add requests and responses to the DigestProcessor
+                 * Add requests and responses to the digest processor
                  */
-                DigestProcessor.pushPoExchangeData(poApduRequestList.get(i),
+                samCommandsProcessor.pushPoExchangeData(poApduRequestList.get(i),
                         poApduResponseList.get(i));
             }
         }
         return poSeResponse;
     }
-
-    /**
-     * Process SAM commands.
-     * <ul>
-     * <li>On the SAM reader, transmission of a SeRequest with channelControl set to KEEP_OPEN.</li>
-     * <li>Returns the corresponding SAM SeResponse.</li>
-     * </ul>
-     *
-     * @param samBuilderParsers a list of commands to sent to the SAM
-     * @return SeResponse all sam responses
-     * @throws KeypleReaderException if a reader error occurs
-     */
-    // public SeResponse processSamCommands(List<SamBuilderParser> samBuilderParsers)
-    // throws KeypleReaderException {
-    //
-    // /* Init SAM ApduRequest List - for the first SAM exchange */
-    // List<ApduRequest> samApduRequestList =
-    // this.getApduRequestsToSendInSession(samBuilderParsers);
-    //
-    // /* SeRequest from the command list */
-    // SeRequest samSeRequest = new SeRequest(samApduRequestList, ChannelControl.KEEP_OPEN);
-    //
-    // logger.debug("processSamCommands => SAMSEREQUEST = {}", samSeRequest);
-    //
-    // /* Transmit SeRequest and get SeResponse */
-    // SeResponse samSeResponse = samReader.transmit(samSeRequest);
-    //
-    // if (samSeResponse == null) {
-    // throw new KeypleCalypsoSecureSessionException("Null response received",
-    // KeypleCalypsoSecureSessionException.Type.SAM, samSeRequest.getApduRequests(),
-    // null);
-    // }
-    //
-    // if (sessionState == SessionState.SESSION_OPEN
-    // && !samSeResponse.wasChannelPreviouslyOpen()) {
-    // throw new KeypleCalypsoSecureSessionException("The logical channel was not open",
-    // KeypleCalypsoSecureSessionException.Type.SAM, samSeRequest.getApduRequests(),
-    // null);
-    // }
-    // // TODO check if the wasChannelPreviouslyOpen should be done in the case where the session
-    // // is closed
-    //
-    // return samSeResponse;
-    // }
 
     /**
      * Close the Secure Session.
@@ -665,9 +492,9 @@ public final class PoTransaction {
                  */
                 for (int i = 0; i < poApduRequestList.size(); i++) {
                     /*
-                     * Add requests and responses to the DigestProcessor
+                     * Add requests and responses to the digest processor
                      */
-                    DigestProcessor.pushPoExchangeData(poApduRequestList.get(i),
+                    samCommandsProcessor.pushPoExchangeData(poApduRequestList.get(i),
                             poAnticipatedResponses.get(i));
                 }
             } else {
@@ -679,49 +506,8 @@ public final class PoTransaction {
         }
 
         /* All SAM digest operations will now run at once. */
-        /* Get the SAM Digest request from the cache manager */
-        SeRequest samSeRequest = DigestProcessor.getSamDigestRequest();
-
-        logger.trace("processAtomicClosing => SAMREQUEST = {}", samSeRequest);
-
-        /* Transmit SeRequest and get SeResponse */
-        SeResponse samSeResponse = samReader.transmit(samSeRequest);
-
-        logger.trace("processAtomicClosing => SAMRESPONSE = {}", samSeResponse);
-
-        if (samSeResponse == null) {
-            throw new KeypleCalypsoSecureSessionException("Null response received",
-                    KeypleCalypsoSecureSessionException.Type.SAM, samSeRequest.getApduRequests(),
-                    null);
-        }
-
-        if (!samSeResponse.wasChannelPreviouslyOpen()) {
-            throw new KeypleCalypsoSecureSessionException("The logical channel was not open",
-                    KeypleCalypsoSecureSessionException.Type.PO, samSeRequest.getApduRequests(),
-                    null);
-        }
-
-        List<ApduResponse> samApduResponseList = samSeResponse.getApduResponses();
-
-        for (int i = 0; i < samApduResponseList.size(); i++) {
-            if (!samApduResponseList.get(i).isSuccessful()) {
-
-                logger.debug("processAtomicClosing => command failure REQUEST = {}, RESPONSE = {}",
-                        samSeRequest.getApduRequests().get(i), samApduResponseList.get(i));
-                throw new IllegalStateException(
-                        "ProcessClosing command failure during digest computation process.");
-            }
-        }
-
         /* Get Terminal Signature from the latest response */
-        byte[] sessionTerminalSignature = null;
-        // TODO Add length check according to Calypso REV (4 / 8)
-        if (!samApduResponseList.isEmpty()) {
-            DigestCloseRespPars respPars = new DigestCloseRespPars(
-                    samApduResponseList.get(samApduResponseList.size() - 1));
-
-            sessionTerminalSignature = respPars.getSignature();
-        }
+        byte[] sessionTerminalSignature = samCommandsProcessor.getTerminalSignature();
 
         if (logger.isDebugEnabled()) {
             logger.debug("processAtomicClosing => SIGNATURE = {}",
@@ -822,55 +608,13 @@ public final class PoTransaction {
                     poApduResponseList);
         }
 
-        /* Check the PO signature part with the SAM */
-        /* Build and send SAM Digest Authenticate command */
-        AbstractApduCommandBuilder digestAuth =
-                new DigestAuthenticateCmdBuild(samRevision, poCloseSessionPars.getSignatureLo());
+        transactionResult =
+                samCommandsProcessor.authenticatePoSignature(poCloseSessionPars.getSignatureLo());
 
-        List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
-        samApduRequestList.add(digestAuth.getApduRequest());
-
-        samSeRequest = new SeRequest(samApduRequestList);
-
-        logger.trace("PoTransaction.DigestProcessor => checkPoSignature: SAMREQUEST = {}",
-                samSeRequest);
-
-        samSeResponse = samReader.transmit(samSeRequest);
-
-        logger.trace("PoTransaction.DigestProcessor => checkPoSignature: SAMRESPONSE = {}",
-                samSeResponse);
-
-        if (samSeResponse == null) {
-            throw new KeypleCalypsoSecureSessionException("Null response received",
-                    KeypleCalypsoSecureSessionException.Type.SAM, samSeRequest.getApduRequests(),
-                    null);
-        }
-
-        if (!samSeResponse.wasChannelPreviouslyOpen()) {
-            throw new KeypleCalypsoSecureSessionException("The logical channel was not open",
-                    KeypleCalypsoSecureSessionException.Type.SAM, samSeRequest.getApduRequests(),
-                    null);
-        }
-
-        /* Get transaction result parsing the response */
-        samApduResponseList = samSeResponse.getApduResponses();
-
-        transactionResult = false;
-        if ((samApduResponseList != null) && !samApduResponseList.isEmpty()) {
-            DigestAuthenticateRespPars respPars =
-                    new DigestAuthenticateRespPars(samApduResponseList.get(0));
-            transactionResult = respPars.isSuccessful();
-            if (transactionResult) {
-                logger.debug(
-                        "PoTransaction.DigestProcessor => checkPoSignature: mutual authentication successful.");
-            } else {
-                logger.debug(
-                        "PoTransaction.DigestProcessor => checkPoSignature: mutual authentication failure.");
-            }
+        if (transactionResult) {
+            logger.debug("checkPoSignature: mutual authentication successful.");
         } else {
-            logger.debug(
-                    "DigestProcessor => checkPoSignature: no response to Digest Authenticate.");
-            throw new IllegalStateException("No response to Digest Authenticate.");
+            logger.debug("checkPoSignature: mutual authentication failure.");
         }
 
         sessionState = SessionState.SESSION_CLOSED;
@@ -1018,164 +762,6 @@ public final class PoTransaction {
     }
 
     /**
-     * This class embeds all the resources to manage the secure session digest computation.
-     *
-     * - initialize: Digest Init command
-     *
-     * - pushPoExchangeData and appendResponse: check consistency and all needed Digest Update
-     * commands
-     *
-     * - getTerminalSignature: Digest Close, returns the terminal part of the signature
-     *
-     * - checkPoSignature: Digest Authenticate, verify the PO part of the signature
-     */
-    private static class DigestProcessor {
-        /*
-         * The digest data cache stores all PO data to be send to SAM during a Secure Session. The
-         * 1st buffer is the data buffer to be provided with Digest Init. The following buffers are
-         * PO command/response pairs
-         */
-        private static final List<byte[]> poDigestDataCache = new ArrayList<byte[]>();
-        private static SamRevision samRevision;
-        private static PoRevision poRevision;
-        private static boolean encryption;
-        private static boolean verification;
-        private static boolean revMode;
-        private static byte keyRecordNumber;
-        private static byte keyKIF;
-        private static byte keyKVC;
-
-        /**
-         * Initializes the digest computation process
-         *
-         * @param poRev the PO revision
-         * @param samRev the SAM revision
-         * @param sessionEncryption true if the session is encrypted
-         * @param verificationMode true if the verification mode is active
-         * @param rev3_2Mode true if the REV3.2 mode is active
-         * @param workKeyRecordNumber the key record number
-         * @param workKeyKif the PO KIF
-         * @param workKeyKVC the PO KVC
-         * @param digestData a first bunch of data to digest.
-         */
-        static void initialize(PoRevision poRev, SamRevision samRev, boolean sessionEncryption,
-                boolean verificationMode, boolean rev3_2Mode, byte workKeyRecordNumber,
-                byte workKeyKif, byte workKeyKVC, byte[] digestData) {
-            /* Store work context */
-            poRevision = poRev;
-            samRevision = samRev;
-            encryption = sessionEncryption;
-            verification = verificationMode;
-            revMode = rev3_2Mode;
-            keyRecordNumber = workKeyRecordNumber;
-            keyKIF = workKeyKif;
-            keyKVC = workKeyKVC;
-            if (logger.isDebugEnabled()) {
-                logger.debug(
-                        "PoTransaction.DigestProcessor => initialize: POREVISION = {}, SAMREVISION = {}, SESSIONENCRYPTION = {}",
-                        poRev, samRev, sessionEncryption, verificationMode);
-                logger.debug(
-                        "PoTransaction.DigestProcessor => initialize: VERIFICATIONMODE = {}, REV32MODE = {} KEYRECNUMBER = {}",
-                        verificationMode, rev3_2Mode, workKeyRecordNumber);
-                logger.debug(
-                        "PoTransaction.DigestProcessor => initialize: KIF = {}, KVC {}, DIGESTDATA = {}",
-                        String.format("%02X", workKeyKif), String.format("%02X", workKeyKVC),
-                        ByteArrayUtil.toHex(digestData));
-            }
-
-            /* Clear data cache */
-            poDigestDataCache.clear();
-
-            /*
-             * Build Digest Init command as first ApduRequest of the digest computation process
-             */
-            poDigestDataCache.add(digestData);
-        }
-
-        /**
-         * Appends a full PO exchange (request and response) to the digest data cache.
-         *
-         * @param request PO request
-         * @param response PO response
-         */
-        static void pushPoExchangeData(ApduRequest request, ApduResponse response) {
-
-            logger.trace("PoTransaction.DigestProcessor => pushPoExchangeData: REQUEST = {}",
-                    request);
-
-            /*
-             * Add an ApduRequest to the digest computation: if the request is of case4 type, Le
-             * must be excluded from the digest computation. In this cas, we remove here the last
-             * byte of the command buffer.
-             */
-            if (request.isCase4()) {
-                poDigestDataCache.add(
-                        Arrays.copyOfRange(request.getBytes(), 0, request.getBytes().length - 1));
-            } else {
-                poDigestDataCache.add(request.getBytes());
-            }
-
-            logger.trace("PoTransaction.DigestProcessor => pushPoExchangeData: RESPONSE = {}",
-                    response);
-
-            /* Add an ApduResponse to the digest computation */
-            poDigestDataCache.add(response.getBytes());
-        }
-
-        /**
-         * Get a unique SAM request for the whole digest computation process.
-         * 
-         * @return SeRequest all the ApduRequest to send to the SAM in order to get the terminal
-         *         signature
-         */
-        // TODO optimization with the use of Digest Update Multiple whenever possible.
-        static SeRequest getSamDigestRequest() {
-            List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
-
-            if (poDigestDataCache.size() == 0) {
-                logger.debug(
-                        "PoTransaction.DigestProcessor => getSamDigestRequest: no data in cache.");
-                throw new IllegalStateException("Digest data cache is empty.");
-            }
-            if (poDigestDataCache.size() % 2 == 0) {
-                /* the number of buffers should be 2*n + 1 */
-                logger.debug(
-                        "PoTransaction.DigestProcessor => getSamDigestRequest: wrong number of buffer in cache NBR = {}.",
-                        poDigestDataCache.size());
-                throw new IllegalStateException("Digest data cache is inconsistent.");
-            }
-
-            /*
-             * Build and append Digest Init command as first ApduRequest of the digest computation
-             * process
-             */
-            samApduRequestList.add(new DigestInitCmdBuild(samRevision, verification, revMode,
-                    keyRecordNumber, keyKIF, keyKVC, poDigestDataCache.get(0)).getApduRequest());
-
-            /*
-             * Build and append Digest Update commands
-             *
-             * The first command is at index 1.
-             */
-            for (int i = 1; i < poDigestDataCache.size(); i++) {
-                samApduRequestList.add(
-                        new DigestUpdateCmdBuild(samRevision, encryption, poDigestDataCache.get(i))
-                                .getApduRequest());
-            }
-
-            /*
-             * Build and append Digest Close command
-             */
-            samApduRequestList.add((new DigestCloseCmdBuild(samRevision,
-                    poRevision.equals(PoRevision.REV3_2) ? SIGNATURE_LENGTH_REV32
-                            : SIGNATURE_LENGTH_REV_INF_32).getApduRequest()));
-
-
-            return new SeRequest(samApduRequestList);
-        }
-    }
-
-    /**
      * The class handles the anticipated response computation.
      */
     private static class AnticipatedResponseBuilder {
@@ -1232,8 +818,7 @@ public final class PoTransaction {
                 }
                 /* Iterate over the poCommandsInsideSession list */
                 for (PoBuilderParser poCommand : poBuilderParsers) {
-                    if (((CalypsoBuilderParser) poCommand)
-                            .getCommandBuilder() instanceof ReadRecordsCmdBuild) {
+                    if ((poCommand).getCommandBuilder() instanceof ReadRecordsCmdBuild) {
                         ApduRequest apduRequest = apduRequestIterator.next();
                         byte sfi = (byte) ((apduRequest.getBytes()[OFFSET_P2] >> 3) & 0x1F);
                         sfiCommandResponseHashMap.put(sfi,
@@ -1327,9 +912,7 @@ public final class PoTransaction {
                                                     : "Increase")
                                             + ". Unable to determine anticipated counter value. SFI = "
                                             + sfi,
-                                    ((PoBuilderParser) poBuilderParser).getCommandBuilder()
-                                            .getApduRequest(),
-                                    null);
+                                    poBuilderParser.getCommandBuilder().getApduRequest(), null);
                         }
                     } else {
                         /* Append/Update/Write Record: response = 9000 */
@@ -1488,23 +1071,9 @@ public final class PoTransaction {
         }
 
         if (poCommandsManager.isSvOperationPending()) {
-            List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
-            AbstractApduCommandBuilder selectDiversifier =
-                    new SvCheckCmdBuild(this.samRevision, poCommandsManager
-                            .getSvOperationResponseParser().getApduResponse().getDataOut());
-            samApduRequestList.add(selectDiversifier.getApduRequest());
-
-            // build a SAM SeRequest
-            SeRequest samSeRequest = new SeRequest(samApduRequestList);
-
-            // execute the command
-            SeResponse samSeResponse = samReader.transmit(samSeRequest);
-
-            ApduResponse svCheckResponse = samSeResponse.getApduResponses().get(0);
-            if (!svCheckResponse.isSuccessful()) {
-                throw new KeypleCalypsoSvSecurityException(
-                        "SAM command prepareReload failed with status word "
-                                + ByteArrayUtil.toHex(svCheckResponse.getBytes()));
+            if (!samCommandsProcessor.isSvCheckSuccessful(poCommandsManager
+                    .getSvOperationResponseParser().getApduResponse().getDataOut())) {
+                throw new KeypleCalypsoSvSecurityException("Stored Value check failed!");
             }
         }
 
@@ -2123,44 +1692,12 @@ public final class PoTransaction {
                 ((SvGetRespPars) poCommandsManager.getSvGetResponseParser()).getCurrentKVC(), date,
                 time, free);
 
-        // get the complementary data from the SAM
-        SvPrepareLoadCmdBuild svPrepareLoadCmdBuild = new SvPrepareLoadCmdBuild(samRevision,
+        // get the security data from the SAM
+        byte[] svReloadComplementaryData = samCommandsProcessor.getSvReloadComplementaryData(
                 (SvGetRespPars) poCommandsManager.getSvGetResponseParser(), svReloadCmdBuild);
 
-        List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
-        int svPrepareLoadCmdIndex;
-        if (!isDiversificationDone) {
-            AbstractApduCommandBuilder selectDiversifier =
-                    new SelectDiversifierCmdBuild(this.samRevision, poCalypsoInstanceSerial);
-            samApduRequestList.add(selectDiversifier.getApduRequest());
-            isDiversificationDone = true;
-            svPrepareLoadCmdIndex = 1;
-        } else {
-            svPrepareLoadCmdIndex = 0;
-        }
-        samApduRequestList.add(svPrepareLoadCmdBuild.getApduRequest());
-
-        // build a SAM SeRequest
-        SeRequest samSeRequest = new SeRequest(samApduRequestList);
-
-        // execute the command
-        SeResponse samSeResponse = samReader.transmit(samSeRequest);
-
-        ApduResponse prepareReloadResponse =
-                samSeResponse.getApduResponses().get(svPrepareLoadCmdIndex);
-        if (!prepareReloadResponse.isSuccessful()) {
-            throw new KeypleCalypsoSvSecurityException(
-                    "SAM command prepareReload failed with status word "
-                            + ByteArrayUtil.toHex(prepareReloadResponse.getBytes()));
-        }
-
-        // create a parser
-        SvPrepareLoadRespPars svPrepareLoadRespPars =
-                new SvPrepareLoadRespPars(prepareReloadResponse);
-
         // finalize the SvReload command builder with the data provided by the SAM
-        svReloadCmdBuild.finalizeBuilder(calypsoSam.getSerialNumber(),
-                svPrepareLoadRespPars.getApduResponse().getDataOut(), extraInfo);
+        svReloadCmdBuild.finalizeBuilder(svReloadComplementaryData, extraInfo);
 
         /*
          * create and keep the PoBuilderParser, return the command index
@@ -2235,44 +1772,12 @@ public final class PoTransaction {
                 ((SvGetRespPars) poCommandsManager.getSvGetResponseParser()).getCurrentKVC(), date,
                 time);
 
-        // get the complementary data from the SAM
-        SvPrepareDebitCmdBuild svPrepareDebitCmdBuild = new SvPrepareDebitCmdBuild(samRevision,
+        // get the security data from the SAM
+        byte[] svDebitComplementaryData = samCommandsProcessor.getSvDebitComplementaryData(
                 (SvGetRespPars) poCommandsManager.getSvGetResponseParser(), svDebitCmdBuild);
 
-        List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
-        int svPrepareDebitCmdIndex;
-        if (!isDiversificationDone) {
-            AbstractApduCommandBuilder selectDiversifier =
-                    new SelectDiversifierCmdBuild(this.samRevision, poCalypsoInstanceSerial);
-            samApduRequestList.add(selectDiversifier.getApduRequest());
-            isDiversificationDone = true;
-            svPrepareDebitCmdIndex = 1;
-        } else {
-            svPrepareDebitCmdIndex = 0;
-        }
-        samApduRequestList.add(svPrepareDebitCmdBuild.getApduRequest());
-
-        // build a SAM SeRequest
-        SeRequest samSeRequest = new SeRequest(samApduRequestList);
-
-        // execute the command
-        SeResponse samSeResponse = samReader.transmit(samSeRequest);
-
-        ApduResponse prepareDebitResponse =
-                samSeResponse.getApduResponses().get(svPrepareDebitCmdIndex);
-        if (!prepareDebitResponse.isSuccessful()) {
-            throw new KeypleCalypsoSvSecurityException(
-                    "SAM command prepareDebit failed with status word "
-                            + ByteArrayUtil.toHex(prepareDebitResponse.getBytes()));
-        }
-
-        // create a parser
-        SvPrepareDebitRespPars svPrepareDebitRespPars =
-                new SvPrepareDebitRespPars(prepareDebitResponse);
-
         // finalize the SvReload command builder with the data provided by the SAM
-        svDebitCmdBuild.finalizeBuilder(calypsoSam.getSerialNumber(),
-                svPrepareDebitRespPars.getApduResponse().getDataOut(), extraInfo);
+        svDebitCmdBuild.finalizeBuilder(svDebitComplementaryData, extraInfo);
 
         /*
          * create and keep the PoBuilderParser, return the command index
@@ -2305,45 +1810,12 @@ public final class PoTransaction {
                 ((SvGetRespPars) poCommandsManager.getSvGetResponseParser()).getCurrentKVC(), date,
                 time);
 
-        // get the complementary data from the SAM
-        SvPrepareUndebitCmdBuild svPrepareUndebitCmdBuild = new SvPrepareUndebitCmdBuild(
-                samRevision, (SvGetRespPars) poCommandsManager.getSvGetResponseParser(),
-                svUndebitCmdBuild);
-
-        List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
-        int svPrepareUndebitCmdIndex;
-        if (!isDiversificationDone) {
-            AbstractApduCommandBuilder selectDiversifier =
-                    new SelectDiversifierCmdBuild(this.samRevision, poCalypsoInstanceSerial);
-            samApduRequestList.add(selectDiversifier.getApduRequest());
-            isDiversificationDone = true;
-            svPrepareUndebitCmdIndex = 1;
-        } else {
-            svPrepareUndebitCmdIndex = 0;
-        }
-        samApduRequestList.add(svPrepareUndebitCmdBuild.getApduRequest());
-
-        // build a SAM SeRequest
-        SeRequest samSeRequest = new SeRequest(samApduRequestList);
-
-        // execute the command
-        SeResponse samSeResponse = samReader.transmit(samSeRequest);
-
-        ApduResponse prepareUndebitResponse =
-                samSeResponse.getApduResponses().get(svPrepareUndebitCmdIndex);
-        if (!prepareUndebitResponse.isSuccessful()) {
-            throw new KeypleCalypsoSvSecurityException(
-                    "SAM command prepareUndebit failed with status word "
-                            + ByteArrayUtil.toHex(prepareUndebitResponse.getBytes()));
-        }
-
-        // create a parser
-        SvPrepareUndebitRespPars svPrepareUndebitRespPars =
-                new SvPrepareUndebitRespPars(prepareUndebitResponse);
+        // get the security data from the SAM
+        byte[] svUndebitComplementaryData = samCommandsProcessor.getSvUndebitComplementaryData(
+                (SvGetRespPars) poCommandsManager.getSvGetResponseParser(), svUndebitCmdBuild);
 
         // finalize the SvReload command builder with the data provided by the SAM
-        svUndebitCmdBuild.finalizeBuilder(calypsoSam.getSerialNumber(),
-                svPrepareUndebitRespPars.getApduResponse().getDataOut(), extraInfo);
+        svUndebitCmdBuild.finalizeBuilder(svUndebitComplementaryData, extraInfo);
 
         /*
          * create and keep the PoBuilderParser, return the command index

@@ -105,7 +105,7 @@ public class SecuritySettings {
     }
 
     /**
-     * CHeck if the provided kvc value is authorized or not.
+     * Check if the provided kvc value is authorized or not.
      * <p>
      * If no list of authorized kvc is defined (authorizedKvcList null), all kvc are authorized.
      * 

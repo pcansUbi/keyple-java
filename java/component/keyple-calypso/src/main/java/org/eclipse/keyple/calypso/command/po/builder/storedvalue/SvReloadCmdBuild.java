@@ -99,23 +99,24 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
      * 5 or 10 byte signature (hi part)
      *
      * 
-     * @param samId the SAM id
-     * @param svPrepareReloadData the data out from the SvPrepareReload SAM command
+     * @param reloadComplementaryData the sam id and the data out from the SvPrepareReload SAM
+     *        command
      * @param extraInfo extra information included in the logs (can be null or empty)
      */
-    public void finalizeBuilder(byte[] samId, byte[] svPrepareReloadData, String extraInfo) {
-        if ((poRevision == PoRevision.REV3_2 && svPrepareReloadData.length != 16)
-                || (poRevision != PoRevision.REV3_2 && svPrepareReloadData.length != 11)) {
+    public void finalizeBuilder(byte[] reloadComplementaryData, String extraInfo) {
+        if ((poRevision == PoRevision.REV3_2 && reloadComplementaryData.length != 20)
+                || (poRevision != PoRevision.REV3_2 && reloadComplementaryData.length != 15)) {
             throw new IllegalArgumentException("Bad SV prepare load data length.");
         }
 
-        byte p1 = svPrepareReloadData[0];
-        byte p2 = svPrepareReloadData[1];
+        byte p1 = reloadComplementaryData[4];
+        byte p2 = reloadComplementaryData[5];
 
-        dataIn[0] = svPrepareReloadData[2];
-        System.arraycopy(samId, 0, dataIn, 11, 4);
-        System.arraycopy(svPrepareReloadData, 3, dataIn, 15, 3);
-        System.arraycopy(svPrepareReloadData, 6, dataIn, 18, svPrepareReloadData.length - 6);
+        dataIn[0] = reloadComplementaryData[6];
+        System.arraycopy(reloadComplementaryData, 0, dataIn, 11, 4);
+        System.arraycopy(reloadComplementaryData, 7, dataIn, 15, 3);
+        System.arraycopy(reloadComplementaryData, 10, dataIn, 18,
+                reloadComplementaryData.length - 10);
 
         this.request = setApduRequest(poClass.getValue(), command, p1, p2, dataIn, null);
         if (extraInfo != null) {

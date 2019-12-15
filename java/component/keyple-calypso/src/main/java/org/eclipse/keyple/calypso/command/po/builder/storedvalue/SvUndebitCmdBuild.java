@@ -94,23 +94,23 @@ public final class SvUndebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRes
      * 5 or 10 byte signature (hi part)
      *
      *
-     * @param samId the SAM id
-     * @param svPrepareUndebitData the data out from the SvPrepareDebit SAM command
+     * @param undebitComplementaryData the data out from the SvPrepareDebit SAM command
      * @param extraInfo extra information included in the logs (can be null or empty)
      */
-    public void finalizeBuilder(byte[] samId, byte[] svPrepareUndebitData, String extraInfo) {
-        if ((poRevision == PoRevision.REV3_2 && svPrepareUndebitData.length != 16)
-                || (poRevision != PoRevision.REV3_2 && svPrepareUndebitData.length != 11)) {
+    public void finalizeBuilder(byte[] undebitComplementaryData, String extraInfo) {
+        if ((poRevision == PoRevision.REV3_2 && undebitComplementaryData.length != 20)
+                || (poRevision != PoRevision.REV3_2 && undebitComplementaryData.length != 15)) {
             throw new IllegalArgumentException("Bad SV prepare load data length.");
         }
 
-        byte p1 = svPrepareUndebitData[0];
-        byte p2 = svPrepareUndebitData[1];
+        byte p1 = undebitComplementaryData[4];
+        byte p2 = undebitComplementaryData[5];
 
-        dataIn[0] = svPrepareUndebitData[2];
-        System.arraycopy(samId, 0, dataIn, 8, 4);
-        System.arraycopy(svPrepareUndebitData, 3, dataIn, 12, 3);
-        System.arraycopy(svPrepareUndebitData, 6, dataIn, 15, svPrepareUndebitData.length - 6);
+        dataIn[0] = undebitComplementaryData[6];
+        System.arraycopy(undebitComplementaryData, 0, dataIn, 8, 4);
+        System.arraycopy(undebitComplementaryData, 7, dataIn, 12, 3);
+        System.arraycopy(undebitComplementaryData, 10, dataIn, 15,
+                undebitComplementaryData.length - 10);
 
         this.request = setApduRequest(poClass.getValue(), command, p1, p2, dataIn, null);
         if (extraInfo != null) {

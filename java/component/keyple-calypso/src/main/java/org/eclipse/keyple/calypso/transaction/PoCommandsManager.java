@@ -103,6 +103,12 @@ class PoCommandsManager {
         if (commandBuilder instanceof SvGetCmdBuild) {
             // SvGet
             svGetIndex = preparedCommandIndex;
+            // change debit to undebit if debit/undo
+            if (svOperation == SvOperation.DEBIT && svAction == SvAction.UNDO) {
+                this.svOperation = SvOperation.UNDEBIT;
+            } else {
+                this.svOperation = svOperation;
+            }
         } else {
             // SvReload, SvDebit or SvUndebit
             if (!poBuilderParserList.isEmpty()) {
@@ -119,9 +125,8 @@ class PoCommandsManager {
             }
             svOpIndex = preparedCommandIndex;
             svOperationPending = true;
+            this.svOperation = svOperation;
         }
-        this.svOperation = svOperation;
-        this.svAction = svAction;
 
         // TODO find a way to efficiently mutualize this with the addRegularCommand method
         poBuilderParserList.add(new PoBuilderParser(commandBuilder));
