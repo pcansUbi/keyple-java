@@ -24,7 +24,7 @@ import org.eclipse.keyple.core.seproxy.message.ApduResponse;
  * command.
  */
 public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRespPars>
-        implements PoSendableInSession, PoModificationCommand {
+        implements PoSendableInSession, PoModificationCommand, PoSvCommand {
 
     /** The command. */
     private static final CalypsoPoCommands command = CalypsoPoCommands.SV_RELOAD;

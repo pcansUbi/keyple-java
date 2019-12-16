@@ -23,7 +23,7 @@ import org.eclipse.keyple.core.seproxy.message.ApduResponse;
  * command.
  */
 public final class SvGetCmdBuild extends AbstractPoCommandBuilder<SvGetRespPars>
-        implements PoSendableInSession, PoModificationCommand {
+        implements PoSendableInSession, PoSvCommand {
 
     /** The command. */
     private static final CalypsoPoCommands command = CalypsoPoCommands.SV_GET;

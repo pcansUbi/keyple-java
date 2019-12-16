@@ -24,7 +24,7 @@ import org.eclipse.keyple.core.seproxy.message.ApduResponse;
  * parser {@link SvDebitRespPars}
  */
 public final class SvUndebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRespPars>
-        implements PoSendableInSession, PoModificationCommand {
+        implements PoSendableInSession, PoModificationCommand, PoSvCommand {
 
     /** The command. */
     private static final CalypsoPoCommands command = CalypsoPoCommands.SV_UNDEBIT;

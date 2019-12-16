@@ -16,8 +16,10 @@ import java.util.List;
 import org.eclipse.keyple.calypso.command.po.AbstractPoCommandBuilder;
 import org.eclipse.keyple.calypso.command.po.AbstractPoResponseParser;
 import org.eclipse.keyple.calypso.command.po.PoBuilderParser;
+import org.eclipse.keyple.calypso.command.po.PoSvCommand;
 import org.eclipse.keyple.calypso.command.po.builder.*;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvGetCmdBuild;
+import org.eclipse.keyple.calypso.transaction.exception.KeypleCalypsoSvException;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,8 +40,8 @@ class PoCommandsManager {
     /** The command index, incremented each time a command is added */
     private int preparedCommandIndex;
     private boolean preparedCommandsProcessed;
-    private int svGetIndex;
-    private int svOpIndex;
+    private int svGetIndex = -1;
+    private int svOpIndex = -1;
     private SvOperation svOperation;
     private SvAction svAction = SvAction.DO;
     private boolean svOperationPending;
@@ -47,7 +49,6 @@ class PoCommandsManager {
     PoCommandsManager() {
         preparedCommandsProcessed = true;
         svOperationPending = false;
-        svGetIndex = -1;
     }
 
     /**
@@ -86,8 +87,8 @@ class PoCommandsManager {
      * @param svOperation the type of SV operation
      * @return the index to retrieve the parser later
      */
-    int addStoredValueCommand(AbstractPoCommandBuilder commandBuilder, SvOperation svOperation,
-            SvAction svAction) {
+    int addStoredValueCommand(PoSvCommand commandBuilder, SvOperation svOperation,
+                                SvAction svAction) {
         /*
          * Reset the list when preparing the first command after the last processing. The builders
          * have remained available until now.
@@ -129,7 +130,7 @@ class PoCommandsManager {
         }
 
         // TODO find a way to efficiently mutualize this with the addRegularCommand method
-        poBuilderParserList.add(new PoBuilderParser(commandBuilder));
+        poBuilderParserList.add(new PoBuilderParser((AbstractPoCommandBuilder)commandBuilder));
         /* return and post-increment index */
         preparedCommandIndex++;
         return (preparedCommandIndex - 1);
@@ -180,7 +181,7 @@ class PoCommandsManager {
      * @return the parser
      */
     public AbstractApduResponseParser getResponseParser(int commandIndex) {
-        if (commandIndex >= poBuilderParserList.size()) {
+        if (commandIndex < 0 || commandIndex >= poBuilderParserList.size()) {
             throw new IllegalArgumentException(
                     String.format("Bad command index: index = %d, number of commands = %d",
                             commandIndex, poBuilderParserList.size()));
@@ -205,7 +206,10 @@ class PoCommandsManager {
      *
      * @return the parser
      */
-    public AbstractPoResponseParser getSvOperationResponseParser() {
+    public AbstractPoResponseParser getSvOperationResponseParser() throws KeypleCalypsoSvException {
+        if(svOpIndex < 0 || svOpIndex >= poBuilderParserList.size()) {
+            throw new IllegalStateException("Illegal SV operation parser index: " + svOpIndex);
+        }
         return poBuilderParserList.get(svOpIndex).getResponseParser();
     }
 }

@@ -24,7 +24,7 @@ import org.eclipse.keyple.core.seproxy.message.ApduResponse;
  * {@link SvDebitRespPars}
  */
 public final class SvDebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRespPars>
-        implements PoSendableInSession, PoModificationCommand {
+        implements PoSendableInSession, PoModificationCommand, PoSvCommand {
 
     /** The command. */
     private static final CalypsoPoCommands command = CalypsoPoCommands.SV_DEBIT;
