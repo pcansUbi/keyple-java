@@ -437,6 +437,61 @@ class SamCommandsProcessor {
     }
 
     /**
+     * Generic method to get the complementary data from SvPrepareLoad/Debit/Undebit commands
+     * 
+     * @param svPrepareRequest the prepare command request (can be prepareSvReload/Debit/Undebit)
+     * @return a byte array containing the complementary data
+     * @throws KeypleReaderException if the communication with the SAM fails
+     */
+    private byte[] getSvComplementaryData(ApduRequest svPrepareRequest)
+            throws KeypleReaderException {
+        List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
+        int svPrepareOperationCmdIndex;
+        if (!isDiversificationDone) {
+            /* Build the SAM Select Diversifier command to provide the SAM with the PO S/N */
+            AbstractApduCommandBuilder selectDiversifier =
+                    new SelectDiversifierCmdBuild(samResource.getMatchingSe().getSamRevision(),
+                            poResource.getMatchingSe().getApplicationSerialNumber());
+            samApduRequestList.add(selectDiversifier.getApduRequest());
+            isDiversificationDone = true;
+            svPrepareOperationCmdIndex = 1;
+        } else {
+            svPrepareOperationCmdIndex = 0;
+        }
+        samApduRequestList.add(svPrepareRequest);
+
+        // build a SAM SeRequest
+        SeRequest samSeRequest = new SeRequest(samApduRequestList);
+
+        // execute the command
+        SeResponse samSeResponse = samReader.transmit(samSeRequest);
+
+        ApduResponse prepareOperationResponse =
+                samSeResponse.getApduResponses().get(svPrepareOperationCmdIndex);
+        if (!prepareOperationResponse.isSuccessful()) {
+            throw new KeypleCalypsoSvSecurityException(
+                    "SAM SV prepare command failed with status word "
+                            + ByteArrayUtil.toHex(prepareOperationResponse.getBytes()));
+        }
+
+        // create a parser
+        SvPrepareOperationRespPars svPrepareOperationRespPars =
+                new SvPrepareOperationRespPars(prepareOperationResponse);
+
+        byte[] samId = samResource.getMatchingSe().getSerialNumber();
+        byte[] prepareOperationData = svPrepareOperationRespPars.getApduResponse().getDataOut();
+
+        byte[] operationComplementaryData = new byte[samId.length + prepareOperationData.length];
+
+        System.arraycopy(samId, 0, operationComplementaryData, 0, samId.length);
+        System.arraycopy(prepareOperationData, 0, operationComplementaryData, samId.length,
+                prepareOperationData.length);
+
+        return operationComplementaryData;
+    }
+
+
+    /**
      * Computes the cryptographic data required for the SvReload command.
      * <p>
      * Use the data from the SvGet command and the partial data from the SvReload command for this
@@ -457,49 +512,7 @@ class SamCommandsProcessor {
                 new SvPrepareLoadCmdBuild(samResource.getMatchingSe().getSamRevision(),
                         svGetResponseParser, svReloadCmdBuild);
 
-        List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
-        int svPrepareLoadCmdIndex;
-        if (!isDiversificationDone) {
-            /* Build the SAM Select Diversifier command to provide the SAM with the PO S/N */
-            AbstractApduCommandBuilder selectDiversifier =
-                    new SelectDiversifierCmdBuild(samResource.getMatchingSe().getSamRevision(),
-                            poResource.getMatchingSe().getApplicationSerialNumber());
-            samApduRequestList.add(selectDiversifier.getApduRequest());
-            isDiversificationDone = true;
-            svPrepareLoadCmdIndex = 1;
-        } else {
-            svPrepareLoadCmdIndex = 0;
-        }
-        samApduRequestList.add(svPrepareLoadCmdBuild.getApduRequest());
-
-        // build a SAM SeRequest
-        SeRequest samSeRequest = new SeRequest(samApduRequestList);
-
-        // execute the command
-        SeResponse samSeResponse = samReader.transmit(samSeRequest);
-
-        ApduResponse prepareReloadResponse =
-                samSeResponse.getApduResponses().get(svPrepareLoadCmdIndex);
-        if (!prepareReloadResponse.isSuccessful()) {
-            throw new KeypleCalypsoSvSecurityException(
-                    "SAM command prepareReload failed with status word "
-                            + ByteArrayUtil.toHex(prepareReloadResponse.getBytes()));
-        }
-
-        // create a parser
-        SvPrepareLoadRespPars svPrepareLoadRespPars =
-                new SvPrepareLoadRespPars(prepareReloadResponse);
-
-        byte[] samId = samResource.getMatchingSe().getSerialNumber();
-        byte[] prepareLoadData = svPrepareLoadRespPars.getApduResponse().getDataOut();
-
-        byte[] reloadComplementaryData = new byte[samId.length + prepareLoadData.length];
-
-        System.arraycopy(samId, 0, reloadComplementaryData, 0, samId.length);
-        System.arraycopy(prepareLoadData, 0, reloadComplementaryData, samId.length,
-                prepareLoadData.length);
-
-        return reloadComplementaryData;
+        return getSvComplementaryData(svPrepareLoadCmdBuild.getApduRequest());
     }
 
     /**
@@ -522,48 +535,7 @@ class SamCommandsProcessor {
         SvPrepareDebitCmdBuild svPrepareDebitCmdBuild = new SvPrepareDebitCmdBuild(
                 samResource.getMatchingSe().getSamRevision(), svGetResponseParser, svDebitCmdBuild);
 
-        List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
-        int svPrepareDebitCmdIndex;
-        if (!isDiversificationDone) {
-            AbstractApduCommandBuilder selectDiversifier =
-                    new SelectDiversifierCmdBuild(samResource.getMatchingSe().getSamRevision(),
-                            poResource.getMatchingSe().getApplicationSerialNumber());
-            samApduRequestList.add(selectDiversifier.getApduRequest());
-            isDiversificationDone = true;
-            svPrepareDebitCmdIndex = 1;
-        } else {
-            svPrepareDebitCmdIndex = 0;
-        }
-        samApduRequestList.add(svPrepareDebitCmdBuild.getApduRequest());
-
-        // build a SAM SeRequest
-        SeRequest samSeRequest = new SeRequest(samApduRequestList);
-
-        // execute the command
-        SeResponse samSeResponse = samReader.transmit(samSeRequest);
-
-        ApduResponse prepareDebitResponse =
-                samSeResponse.getApduResponses().get(svPrepareDebitCmdIndex);
-        if (!prepareDebitResponse.isSuccessful()) {
-            throw new KeypleCalypsoSvSecurityException(
-                    "SAM command prepareDebit failed with status word "
-                            + ByteArrayUtil.toHex(prepareDebitResponse.getBytes()));
-        }
-
-        // create a parser
-        SvPrepareDebitRespPars svPrepareDebitRespPars =
-                new SvPrepareDebitRespPars(prepareDebitResponse);
-
-        byte[] samId = samResource.getMatchingSe().getSerialNumber();
-        byte[] prepareDebitData = svPrepareDebitRespPars.getApduResponse().getDataOut();
-
-        byte[] debitComplementaryData = new byte[samId.length + prepareDebitData.length];
-
-        System.arraycopy(samId, 0, debitComplementaryData, 0, samId.length);
-        System.arraycopy(prepareDebitData, 0, debitComplementaryData, samId.length,
-                prepareDebitData.length);
-
-        return debitComplementaryData;
+        return getSvComplementaryData(svPrepareDebitCmdBuild.getApduRequest());
     }
 
     /**
@@ -587,48 +559,7 @@ class SamCommandsProcessor {
                 new SvPrepareUndebitCmdBuild(samResource.getMatchingSe().getSamRevision(),
                         svGetResponseParser, svUndebitCmdBuild);
 
-        List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
-        int svPrepareUndebitCmdIndex;
-        if (!isDiversificationDone) {
-            AbstractApduCommandBuilder selectDiversifier =
-                    new SelectDiversifierCmdBuild(samResource.getMatchingSe().getSamRevision(),
-                            poResource.getMatchingSe().getApplicationSerialNumber());
-            samApduRequestList.add(selectDiversifier.getApduRequest());
-            isDiversificationDone = true;
-            svPrepareUndebitCmdIndex = 1;
-        } else {
-            svPrepareUndebitCmdIndex = 0;
-        }
-        samApduRequestList.add(svPrepareUndebitCmdBuild.getApduRequest());
-
-        // build a SAM SeRequest
-        SeRequest samSeRequest = new SeRequest(samApduRequestList);
-
-        // execute the command
-        SeResponse samSeResponse = samReader.transmit(samSeRequest);
-
-        ApduResponse prepareUndebitResponse =
-                samSeResponse.getApduResponses().get(svPrepareUndebitCmdIndex);
-        if (!prepareUndebitResponse.isSuccessful()) {
-            throw new KeypleCalypsoSvSecurityException(
-                    "SAM command prepareUndebit failed with status word "
-                            + ByteArrayUtil.toHex(prepareUndebitResponse.getBytes()));
-        }
-
-        // create a parser
-        SvPrepareUndebitRespPars svPrepareUndebitRespPars =
-                new SvPrepareUndebitRespPars(prepareUndebitResponse);
-
-        byte[] samId = samResource.getMatchingSe().getSerialNumber();
-        byte[] prepareUndebitData = svPrepareUndebitRespPars.getApduResponse().getDataOut();
-
-        byte[] undebitComplementaryData = new byte[samId.length + prepareUndebitData.length];
-
-        System.arraycopy(samId, 0, undebitComplementaryData, 0, samId.length);
-        System.arraycopy(prepareUndebitData, 0, undebitComplementaryData, samId.length,
-                prepareUndebitData.length);
-
-        return undebitComplementaryData;
+        return getSvComplementaryData(svPrepareUndebitCmdBuild.getApduRequest());
     }
 
     /**
