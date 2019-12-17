@@ -16,7 +16,7 @@ import java.util.Map;
 import org.eclipse.keyple.calypso.command.sam.AbstractSamResponseParser;
 import org.eclipse.keyple.core.seproxy.message.ApduResponse;
 
-public class SvPrepareLoadRespPars extends AbstractSamResponseParser {
+public class SvPrepareOperationRespPars extends AbstractSamResponseParser {
     private static final Map<Integer, StatusProperties> STATUS_TABLE;
 
     static {
@@ -39,11 +39,12 @@ public class SvPrepareLoadRespPars extends AbstractSamResponseParser {
     }
 
     /**
-     * Instantiates a new CardGenerateKeyRespPars.
+     * Instantiates a new SvPrepareOperationRespPars.
      *
      * @param response from the SAM
      */
-    public SvPrepareLoadRespPars(ApduResponse response) {
+    public SvPrepareOperationRespPars(ApduResponse response) {
         super(response);
     }
+
 }
