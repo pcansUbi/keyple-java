@@ -17,9 +17,7 @@ import org.eclipse.keyple.calypso.command.po.AbstractPoCommandBuilder;
 import org.eclipse.keyple.calypso.command.po.AbstractPoResponseParser;
 import org.eclipse.keyple.calypso.command.po.PoBuilderParser;
 import org.eclipse.keyple.calypso.command.po.PoSvCommand;
-import org.eclipse.keyple.calypso.command.po.builder.*;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvGetCmdBuild;
-import org.eclipse.keyple.calypso.transaction.exception.KeypleCalypsoSvException;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +38,7 @@ class PoCommandsManager {
     /** The command index, incremented each time a command is added */
     private int preparedCommandIndex;
     private boolean preparedCommandsProcessed;
-    private PoBuilderParser svGetBuilderParser;
+    private boolean lastCommandIsSvGet;
     private int svGetIndex = -1;
     private int svOpIndex = -1;
     private SvOperation svOperation;
@@ -53,6 +51,19 @@ class PoCommandsManager {
     }
 
     /**
+     * Resets the list of builders/parsers if it has already been processed.
+     * <p>
+     * Clears the processed flag.
+     */
+    private void updateBuilderParserList() {
+        if (preparedCommandsProcessed) {
+            poBuilderParserList.clear();
+            preparedCommandIndex = 0;
+            preparedCommandsProcessed = false;
+        }
+    }
+
+    /**
      * Add a regular command to the builders and parsers list.
      * <p>
      * Handle the clearing of the list if needed.
@@ -61,23 +72,22 @@ class PoCommandsManager {
      * @return the index to retrieve the parser later
      */
     int addRegularCommand(AbstractPoCommandBuilder commandBuilder) {
-        if(commandBuilder instanceof PoSvCommand) {
+        if (commandBuilder instanceof PoSvCommand) {
             throw new IllegalStateException("An SV command cannot be added with this method.");
         }
 
-        /*
-         * Reset the list when preparing the first command after the last processing. The builders
-         * have remained available until now.
+        /**
+         * Reset the list if when preparing the first command after the last processing.
+         * <p>
+         * However, the parsers have remained available until now.
          */
-        if (preparedCommandsProcessed) {
-            poBuilderParserList.clear();
-            preparedCommandsProcessed = false;
-            preparedCommandIndex = 0;
-        }
+        updateBuilderParserList();
 
         poBuilderParserList.add(new PoBuilderParser(commandBuilder));
         /* return and post-increment index */
         preparedCommandIndex++;
+        /* not an SV Get command */
+        lastCommandIsSvGet = false;
         return (preparedCommandIndex - 1);
     }
 
@@ -87,23 +97,18 @@ class PoCommandsManager {
      * <p>
      * Handle the clearing of the list if needed.
      * 
-     * @param commandBuilder the StoredValue command builder TODO // check the need for a specific
-     *        interface
+     * @param commandBuilder the StoredValue command builder
      * @param svOperation the type of SV operation
      * @return the index to retrieve the parser later
      */
     int addStoredValueCommand(PoSvCommand commandBuilder, SvOperation svOperation,
-                                SvAction svAction) {
-        /*
-         * Reset the list when preparing the first command after the last processing. The builders
-         * have remained available until now.
+            SvAction svAction) {
+        /**
+         * Reset the list if when preparing the first command after the last processing.
+         * <p>
+         * However, the parsers have remained available until now.
          */
-        // TODO find a way to efficiently mutualize this with the addRegularCommand method
-        if (preparedCommandsProcessed) {
-            poBuilderParserList.clear();
-            preparedCommandsProcessed = false;
-            preparedCommandIndex = 0;
-        }
+        updateBuilderParserList();
 
         // check some logic around the SV commands:
         // SvGet Debit/Undo is
@@ -117,6 +122,8 @@ class PoCommandsManager {
                 this.svOperation = svOperation;
             }
             this.svAction = svAction;
+            /* not an SV Get command */
+            lastCommandIsSvGet = true;
         } else {
             // SvReload, SvDebit or SvUndebit
             if (!poBuilderParserList.isEmpty()) {
@@ -124,13 +131,11 @@ class PoCommandsManager {
                         "This SV command can only be placed in the first position in the list of prepared commands");
             }
 
-            if(svGetIndex != preparedCommandIndex) {
-                throw new IllegalStateException(
-                        "This SV command must follow an SV Get command");
+            if (!lastCommandIsSvGet) {
+                throw new IllegalStateException("This SV command must follow an SV Get command");
             }
 
-            // TODO Improve this: here we expect that the builder and the SV operation are
-            // consistent
+            // here we expect that the builder and the SV operation are consistent
             if (svOperation != this.svOperation) {
                 logger.error("SvGet operation = {}, current command = {}", this.svOperation,
                         svOperation);
@@ -139,10 +144,10 @@ class PoCommandsManager {
             svOpIndex = preparedCommandIndex;
             svOperationPending = true;
             this.svOperation = svOperation;
+            lastCommandIsSvGet = false;
         }
 
-        // TODO find a way to efficiently mutualize this with the addRegularCommand method
-        poBuilderParserList.add(new PoBuilderParser((AbstractPoCommandBuilder)commandBuilder));
+        poBuilderParserList.add(new PoBuilderParser((AbstractPoCommandBuilder) commandBuilder));
         /* return and post-increment index */
         preparedCommandIndex++;
         return (preparedCommandIndex - 1);
@@ -177,12 +182,8 @@ class PoCommandsManager {
      * @return the current PoBuilderParser list
      */
     public List<PoBuilderParser> getPoBuilderParserList() {
-        // TODO Improve this in the case where no commands are added before closing
-        if (preparedCommandsProcessed) {
-            poBuilderParserList.clear();
-            preparedCommandsProcessed = false;
-            preparedCommandIndex = 0;
-        }
+        /* here we make sure to clear the list if it has already been processed */
+        updateBuilderParserList();
         return poBuilderParserList;
     }
 
@@ -207,7 +208,7 @@ class PoCommandsManager {
      * @return the parser
      */
     public AbstractPoResponseParser getSvGetResponseParser() {
-        if (svGetIndex != poBuilderParserList.size() - 1) {
+        if (svGetIndex < 0 || svGetIndex != poBuilderParserList.size() - 1) {
             throw new IllegalStateException("No SvGet builder is available");
         }
         return poBuilderParserList.get(svGetIndex).getResponseParser();
@@ -219,7 +220,7 @@ class PoCommandsManager {
      * @return the parser
      */
     public AbstractPoResponseParser getSvOperationResponseParser() {
-        if(svOpIndex < 0 || svOpIndex >= poBuilderParserList.size()) {
+        if (svOpIndex < 0 || svOpIndex >= poBuilderParserList.size()) {
             throw new IllegalStateException("Illegal SV operation parser index: " + svOpIndex);
         }
         return poBuilderParserList.get(svOpIndex).getResponseParser();
