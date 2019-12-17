@@ -40,6 +40,7 @@ class PoCommandsManager {
     /** The command index, incremented each time a command is added */
     private int preparedCommandIndex;
     private boolean preparedCommandsProcessed;
+    private PoBuilderParser svGetBuilderParser;
     private int svGetIndex = -1;
     private int svOpIndex = -1;
     private SvOperation svOperation;
@@ -60,6 +61,10 @@ class PoCommandsManager {
      * @return the index to retrieve the parser later
      */
     int addRegularCommand(AbstractPoCommandBuilder commandBuilder) {
+        if(commandBuilder instanceof PoSvCommand) {
+            throw new IllegalStateException("An SV command cannot be added with this method.");
+        }
+
         /*
          * Reset the list when preparing the first command after the last processing. The builders
          * have remained available until now.
@@ -100,7 +105,8 @@ class PoCommandsManager {
             preparedCommandIndex = 0;
         }
 
-        // check some logic around the SV commands
+        // check some logic around the SV commands:
+        // SvGet Debit/Undo is
         if (commandBuilder instanceof SvGetCmdBuild) {
             // SvGet
             svGetIndex = preparedCommandIndex;
@@ -110,11 +116,17 @@ class PoCommandsManager {
             } else {
                 this.svOperation = svOperation;
             }
+            this.svAction = svAction;
         } else {
             // SvReload, SvDebit or SvUndebit
             if (!poBuilderParserList.isEmpty()) {
                 throw new IllegalStateException(
                         "This SV command can only be placed in the first position in the list of prepared commands");
+            }
+
+            if(svGetIndex != preparedCommandIndex) {
+                throw new IllegalStateException(
+                        "This SV command must follow an SV Get command");
             }
 
             // TODO Improve this: here we expect that the builder and the SV operation are
@@ -206,7 +218,7 @@ class PoCommandsManager {
      *
      * @return the parser
      */
-    public AbstractPoResponseParser getSvOperationResponseParser() throws KeypleCalypsoSvException {
+    public AbstractPoResponseParser getSvOperationResponseParser() {
         if(svOpIndex < 0 || svOpIndex >= poBuilderParserList.size()) {
             throw new IllegalStateException("Illegal SV operation parser index: " + svOpIndex);
         }

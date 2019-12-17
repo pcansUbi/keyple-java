@@ -28,6 +28,7 @@ public final class SvGetCmdBuild extends AbstractPoCommandBuilder<SvGetRespPars>
     /** The command. */
     private static final CalypsoPoCommands command = CalypsoPoCommands.SV_GET;
 
+    private final SvOperation svOperation;
     private final byte[] header;
 
     /**
@@ -55,6 +56,12 @@ public final class SvGetCmdBuild extends AbstractPoCommandBuilder<SvGetRespPars>
         header[1] = p1;
         header[2] = p2;
         header[3] = (byte) 0x00;
+
+        this.svOperation = svOperation;
+    }
+
+    public SvOperation getSvOperation() {
+        return svOperation;
     }
 
     @Override
