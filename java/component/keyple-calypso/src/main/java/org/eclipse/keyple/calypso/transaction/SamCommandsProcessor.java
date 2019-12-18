@@ -61,6 +61,7 @@ class SamCommandsProcessor {
     private byte workKeyKif;
     private byte workKeyKVC;
     private boolean isDiversificationDone;
+    private boolean isDigestInitDone;
 
     SamCommandsProcessor(SamResource samResource, PoResource poResource,
             SecuritySettings securitySettings) {
@@ -263,7 +264,7 @@ class SamCommandsProcessor {
      * @return SeRequest all the ApduRequest to send to the SAM in order to get the terminal
      *         signature
      */
-    private SeRequest getSamDigestRequest() {
+    private SeRequest getSamDigestRequest(boolean addDigestClose) {
         // TODO optimization with the use of Digest Update Multiple whenever possible.
         List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
 
@@ -279,14 +280,17 @@ class SamCommandsProcessor {
             throw new IllegalStateException("Digest data cache is inconsistent.");
         }
 
-        /*
-         * Build and append Digest Init command as first ApduRequest of the digest computation
-         * process
-         */
-        samApduRequestList.add(new DigestInitCmdBuild(samResource.getMatchingSe().getSamRevision(),
-                verificationMode, poResource.getMatchingSe().isRev3_2ModeAvailable(),
-                workKeyRecordNumber, workKeyKif, workKeyKVC, poDigestDataCache.get(0))
-                        .getApduRequest());
+        if(!isDigestInitDone) {
+            /*
+             * Build and append Digest Init command as first ApduRequest of the digest computation
+             * process
+             */
+            samApduRequestList.add(new DigestInitCmdBuild(samResource.getMatchingSe().getSamRevision(),
+                    verificationMode, poResource.getMatchingSe().isRev3_2ModeAvailable(),
+                    workKeyRecordNumber, workKeyKif, workKeyKVC, poDigestDataCache.get(0))
+                    .getApduRequest());
+            isDigestInitDone = true;
+        }
 
         /*
          * Build and append Digest Update commands
@@ -299,39 +303,37 @@ class SamCommandsProcessor {
                             sessionEncryption, poDigestDataCache.get(i)).getApduRequest());
         }
 
-        /*
-         * Build and append Digest Close command
-         */
-        samApduRequestList
-                .add((new DigestCloseCmdBuild(samResource.getMatchingSe().getSamRevision(),
-                        poResource.getMatchingSe().getRevision().equals(PoRevision.REV3_2)
-                                ? SIGNATURE_LENGTH_REV32
-                                : SIGNATURE_LENGTH_REV_INF_32).getApduRequest()));
-
+        if(addDigestClose) {
+            /*
+             * Build and append Digest Close command
+             */
+            samApduRequestList
+                    .add((new DigestCloseCmdBuild(samResource.getMatchingSe().getSamRevision(),
+                            poResource.getMatchingSe().getRevision().equals(PoRevision.REV3_2)
+                                    ? SIGNATURE_LENGTH_REV32
+                                    : SIGNATURE_LENGTH_REV_INF_32).getApduRequest()));
+        }
 
         return new SeRequest(samApduRequestList);
     }
 
     /**
-     * Gets the terminal signature from the SAM
-     * <p>
-     * All remaining data in the digest cache is sent to the SAM and the Digest Close command is
-     * executed.
-     * 
-     * @return the terminal signature
+     *
+     * @param returnSignature
+     * @return
      * @throws KeypleReaderException
      */
-    byte[] getTerminalSignature() throws KeypleReaderException {
+    private byte[] flushPendingDigestCommands(boolean returnSignature) throws KeypleReaderException {
         /* All SAM digest operations will now run at once. */
         /* Get the SAM Digest request from the cache manager */
-        SeRequest samSeRequest = getSamDigestRequest();
+        SeRequest samSeRequest = getSamDigestRequest(returnSignature);
 
-        logger.trace("processAtomicClosing => SAMREQUEST = {}", samSeRequest);
+        logger.trace("flushPendingDigestCommands => SAMREQUEST = {}", samSeRequest);
 
         /* Transmit SeRequest and get SeResponse */
         SeResponse samSeResponse = samReader.transmit(samSeRequest);
 
-        logger.trace("processAtomicClosing => SAMRESPONSE = {}", samSeResponse);
+        logger.trace("flushPendingDigestCommands => SAMRESPONSE = {}", samSeResponse);
 
         if (samSeResponse == null) {
             throw new KeypleCalypsoSecureSessionException("Null response received",
@@ -344,28 +346,45 @@ class SamCommandsProcessor {
                     KeypleCalypsoSecureSessionException.Type.PO, samSeRequest.getApduRequests(),
                     null);
         }
-
         List<ApduResponse> samApduResponseList = samSeResponse.getApduResponses();
 
         for (int i = 0; i < samApduResponseList.size(); i++) {
             if (!samApduResponseList.get(i).isSuccessful()) {
 
-                logger.debug("processAtomicClosing => command failure REQUEST = {}, RESPONSE = {}",
+                logger.debug("flushPendingDigestCommands => command failure REQUEST = {}, RESPONSE = {}",
                         samSeRequest.getApduRequests().get(i), samApduResponseList.get(i));
                 throw new IllegalStateException(
-                        "ProcessClosing command failure during digest computation process.");
+                        "flushPendingDigestCommands command failure during digest computation process.");
             }
         }
+        if(returnSignature) {
+            /* Get Terminal Signature from the latest response */
+            byte[] sessionTerminalSignature = null;
+            // TODO Add length check according to Calypso REV (4 / 8)
+            if (!samApduResponseList.isEmpty()) {
+                DigestCloseRespPars respPars = new DigestCloseRespPars(
+                        samApduResponseList.get(samApduResponseList.size() - 1));
 
-        /* Get Terminal Signature from the latest response */
-        byte[] sessionTerminalSignature = null;
-        // TODO Add length check according to Calypso REV (4 / 8)
-        if (!samApduResponseList.isEmpty()) {
-            DigestCloseRespPars respPars = new DigestCloseRespPars(
-                    samApduResponseList.get(samApduResponseList.size() - 1));
-
-            sessionTerminalSignature = respPars.getSignature();
+                sessionTerminalSignature = respPars.getSignature();
+            }
+            return sessionTerminalSignature;
+        } else {
+            return null;
         }
+    }
+
+    /**
+     * Gets the terminal signature from the SAM
+     * <p>
+     * All remaining data in the digest cache is sent to the SAM and the Digest Close command is
+     * executed.
+     * 
+     * @return the terminal signature
+     * @throws KeypleReaderException
+     */
+    byte[] getTerminalSignature() throws KeypleReaderException {
+
+        byte[] sessionTerminalSignature = flushPendingDigestCommands(true);
 
         if (logger.isDebugEnabled()) {
             logger.debug("processAtomicClosing => SIGNATURE = {}",
