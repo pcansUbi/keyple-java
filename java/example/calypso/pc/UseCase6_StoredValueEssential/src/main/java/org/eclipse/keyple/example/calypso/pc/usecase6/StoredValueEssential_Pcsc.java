@@ -237,10 +237,17 @@ public class StoredValueEssential_Pcsc {
      * @throws KeypleReaderException
      */
     private static boolean svDebitInSession(int amount) throws KeypleReaderException {
-        int svGetIndex;
-        svGetIndex = poTransaction.prepareSvGet(SvOperation.DEBIT, SvAction.DO);
+        int readRecordIndex =
+                poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_EnvironmentAndHolder,
+                        ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
+                        29, String.format("EnvironmentAndHolder (SFI=%02X))",
+                                CalypsoClassicInfo.SFI_EnvironmentAndHolder));
 
-        if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
+        int svGetIndex = poTransaction.prepareSvGet(SvOperation.DEBIT, SvAction.DO);
+
+        logger.warn("Open session.");
+        if (!poTransaction.processOpening(PoTransaction.ModificationMode.ATOMIC,
+                PoTransaction.SessionAccessLevel.SESSION_LVL_DEBIT, (byte) 0, (byte) 0)) {
             return false;
         } else {
             SvGetRespPars svGetRespPars =
@@ -249,11 +256,12 @@ public class StoredValueEssential_Pcsc {
             logger.warn("Last debit amount = {}", svGetRespPars.getDebitLog().getAmount());
         }
 
-        int svDebitIndex = poTransaction.prepareSvDebit(amount);
+        int svReloadIndex = poTransaction.prepareSvDebit(amount);
 
-        if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
+        logger.warn("Close session.");
+        if (poTransaction.processClosing(ChannelControl.CLOSE_AFTER)) {
             if (poTransaction.isSuccessful()) {
-                logger.warn("Debit operation in qsession successful.");
+                logger.warn("Debit operation in session successful.");
             } else {
                 logger.error("Debit operation failed: ", poTransaction.getLastError());
             }

@@ -25,8 +25,6 @@ import org.eclipse.keyple.calypso.command.po.parser.*;
 import org.eclipse.keyple.calypso.command.po.parser.security.AbstractOpenSessionRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.security.CloseSessionRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
-import org.eclipse.keyple.calypso.command.sam.builder.security.*;
-import org.eclipse.keyple.calypso.command.sam.parser.security.*;
 import org.eclipse.keyple.calypso.transaction.exception.*;
 import org.eclipse.keyple.core.command.AbstractApduCommandBuilder;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
@@ -914,7 +912,13 @@ public final class PoTransaction {
                                             + sfi,
                                     poBuilderParser.getCommandBuilder().getApduRequest(), null);
                         }
-                    } else {
+                    } else if (poBuilderParser.getCommandBuilder() instanceof SvReloadCmdBuild
+                            || poBuilderParser.getCommandBuilder() instanceof SvDebitCmdBuild
+                            || poBuilderParser.getCommandBuilder() instanceof SvUndebitCmdBuild) {
+                        /* Append/Update/Write Record: response = 9000 */
+                        apduResponses.add(new ApduResponse(ByteArrayUtil.fromHex("6200"), null));
+                    }
+                     else {
                         /* Append/Update/Write Record: response = 9000 */
                         apduResponses.add(new ApduResponse(ByteArrayUtil.fromHex("9000"), null));
                     }
@@ -1071,7 +1075,7 @@ public final class PoTransaction {
         }
 
         if (poCommandsManager.isSvOperationPending()) {
-            if (!samCommandsProcessor.isSvCheckSuccessful(poCommandsManager
+            if (!samCommandsProcessor.getSvCheckStatus(poCommandsManager
                     .getSvOperationResponseParser().getApduResponse().getDataOut())) {
                 throw new KeypleCalypsoSvSecurityException("Stored Value check failed!");
             }
