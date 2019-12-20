@@ -279,6 +279,7 @@ class SamCommandsProcessor {
      *         signature
      */
     private SeRequest getPendingSamRequests(boolean addDigestClose) {
+        int startIndex;
         // TODO optimization with the use of Digest Update Multiple whenever possible.
         List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
 
@@ -295,6 +296,9 @@ class SamCommandsProcessor {
                         poDigestDataCache.size());
                 throw new IllegalStateException("Digest data cache is inconsistent.");
             }
+            startIndex = 1;
+        } else {
+            startIndex = 0;
         }
 
         if(!isDigestInitDone) {
@@ -314,7 +318,7 @@ class SamCommandsProcessor {
          *
          * The first command is at index 1.
          */
-        for (int i = 1; i < poDigestDataCache.size(); i++) {
+        for (int i = startIndex; i < poDigestDataCache.size(); i++) {
             samApduRequestList
                     .add(new DigestUpdateCmdBuild(samResource.getMatchingSe().getSamRevision(),
                             sessionEncryption, poDigestDataCache.get(i)).getApduRequest());

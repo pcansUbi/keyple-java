@@ -237,11 +237,11 @@ public class StoredValueEssential_Pcsc {
      * @throws KeypleReaderException
      */
     private static boolean svDebitInSession(int amount) throws KeypleReaderException {
-        int readRecordIndex =
-                poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_EnvironmentAndHolder,
-                        ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
-                        29, String.format("EnvironmentAndHolder (SFI=%02X))",
-                                CalypsoClassicInfo.SFI_EnvironmentAndHolder));
+//        int readRecordIndex =
+//                poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_EnvironmentAndHolder,
+//                        ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
+//                        29, String.format("EnvironmentAndHolder (SFI=%02X))",
+//                                CalypsoClassicInfo.SFI_EnvironmentAndHolder));
 
         int svGetIndex = poTransaction.prepareSvGet(SvOperation.DEBIT, SvAction.DO);
 

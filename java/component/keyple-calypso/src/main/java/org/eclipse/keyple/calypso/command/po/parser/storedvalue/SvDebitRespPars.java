@@ -71,7 +71,7 @@ public final class SvDebitRespPars extends AbstractPoResponseParser {
         m.put(0x6985, new StatusProperties(false, "Conditions for use not satisfied."));
         m.put(0x6988, new StatusProperties(false, "Incorrect SignatureHi."));
         m.put(0x6200, new StatusProperties(true,
-                "Successful execution, response data postponed until session closing" + "."));
+                "Successful execution, response data postponed until session closing."));
         m.put(0x9000, new StatusProperties(true, "Successful execution."));
         STATUS_TABLE = m;
     }
@@ -83,7 +83,8 @@ public final class SvDebitRespPars extends AbstractPoResponseParser {
      */
     public SvDebitRespPars(ApduResponse response) {
         super(response);
-        if (response.getDataOut().length != 3 && response.getDataOut().length != 6) {
+        /* the permitted lengths are 0 (in session), 3 (not 3.2) or 6 (3.2)  */
+        if (response.getDataOut().length != 0 && response.getDataOut().length != 3 && response.getDataOut().length != 6) {
             throw new IllegalStateException("Bad length in response to SV Debit command.");
         }
     }
