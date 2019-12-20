@@ -71,7 +71,9 @@ public final class SvReloadRespPars extends AbstractPoResponseParser {
      */
     public SvReloadRespPars(ApduResponse response) {
         super(response);
-        if (response.getDataOut().length != 3 && response.getDataOut().length != 6) {
+        /* the permitted lengths are 0 (in session), 3 (not 3.2) or 6 (3.2) */
+        if (response.getDataOut().length != 0 && response.getDataOut().length != 3
+                && response.getDataOut().length != 6) {
             throw new IllegalStateException("Bad length in response to SV Reload command.");
         }
     }

@@ -66,6 +66,7 @@ class SamCommandsProcessor {
 
     /**
      * Constructor
+     * 
      * @param samResource the SAM resource containing the SAM reader and the Calypso SAM information
      * @param poResource the PO resource containg the PO reader and the Calypso PO information
      * @param securitySettings the security settings from the application layer
@@ -80,6 +81,7 @@ class SamCommandsProcessor {
 
     /**
      * Gets the terminal challenge
+     * 
      * @return
      * @throws KeypleReaderException
      */
@@ -94,7 +96,8 @@ class SamCommandsProcessor {
         List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
 
         if (logger.isDebugEnabled()) {
-            logger.debug("getSessionTerminalChallenge => Identification: DFNAME = {}, SERIALNUMBER = {}",
+            logger.debug(
+                    "getSessionTerminalChallenge => Identification: DFNAME = {}, SERIALNUMBER = {}",
                     ByteArrayUtil.toHex(poResource.getMatchingSe().getDfName()),
                     ByteArrayUtil.toHex(samResource.getMatchingSe().getSerialNumber()));
         }
@@ -126,7 +129,8 @@ class SamCommandsProcessor {
         /* Build a SAM SeRequest */
         SeRequest samSeRequest = new SeRequest(samApduRequestList);
 
-        logger.trace("getSessionTerminalChallenge => identification: SAMSEREQUEST = {}", samSeRequest);
+        logger.trace("getSessionTerminalChallenge => identification: SAMSEREQUEST = {}",
+                samSeRequest);
 
         /*
          * Transmit the SeRequest to the SAM and get back the SeResponse (list of ApduResponse)
@@ -140,7 +144,8 @@ class SamCommandsProcessor {
                     null);
         }
 
-        logger.trace("getSessionTerminalChallenge => identification: SAMSERESPONSE = {}", samSeResponse);
+        logger.trace("getSessionTerminalChallenge => identification: SAMSERESPONSE = {}",
+                samSeResponse);
 
         List<ApduResponse> samApduResponseList = samSeResponse.getApduResponses();
         byte[] sessionTerminalChallenge;
@@ -152,7 +157,8 @@ class SamCommandsProcessor {
                     new SamGetChallengeRespPars(samApduResponseList.get(numberOfSamCmd - 1));
             sessionTerminalChallenge = samChallengePars.getChallenge();
             if (logger.isDebugEnabled()) {
-                logger.debug("getSessionTerminalChallenge => identification: TERMINALCHALLENGE = {}",
+                logger.debug(
+                        "getSessionTerminalChallenge => identification: TERMINALCHALLENGE = {}",
                         ByteArrayUtil.toHex(sessionTerminalChallenge));
             }
         } else {
@@ -222,12 +228,10 @@ class SamCommandsProcessor {
                     poResource.getMatchingSe().getRevision(),
                     samResource.getMatchingSe().getSamRevision(), sessionEncryption,
                     verificationMode);
-            logger.debug(
-                    "initialize: VERIFICATIONMODE = {}, REV32MODE = {} KEYRECNUMBER = {}",
+            logger.debug("initialize: VERIFICATIONMODE = {}, REV32MODE = {} KEYRECNUMBER = {}",
                     verificationMode, poResource.getMatchingSe().isRev3_2ModeAvailable(),
                     workKeyRecordNumber);
-            logger.debug(
-                    "initialize: KIF = {}, KVC {}, DIGESTDATA = {}",
+            logger.debug("initialize: KIF = {}, KVC {}, DIGESTDATA = {}",
                     String.format("%02X", workKeyKif), String.format("%02X", workKeyKVC),
                     ByteArrayUtil.toHex(digestData));
         }
@@ -265,8 +269,7 @@ class SamCommandsProcessor {
             poDigestDataCache.add(request.getBytes());
         }
 
-        logger.trace("pushPoExchangeData: RESPONSE = {}",
-                response);
+        logger.trace("pushPoExchangeData: RESPONSE = {}", response);
 
         /* Add an ApduResponse to the digest computation */
         poDigestDataCache.add(response.getBytes());
@@ -291,8 +294,7 @@ class SamCommandsProcessor {
             }
             if (poDigestDataCache.size() % 2 == 0) {
                 /* the number of buffers should be 2*n + 1 */
-                logger.debug(
-                        "getSamDigestRequest: wrong number of buffer in cache NBR = {}.",
+                logger.debug("getSamDigestRequest: wrong number of buffer in cache NBR = {}.",
                         poDigestDataCache.size());
                 throw new IllegalStateException("Digest data cache is inconsistent.");
             }
@@ -301,15 +303,16 @@ class SamCommandsProcessor {
             startIndex = 0;
         }
 
-        if(!isDigestInitDone) {
+        if (!isDigestInitDone) {
             /*
              * Build and append Digest Init command as first ApduRequest of the digest computation
              * process
              */
-            samApduRequestList.add(new DigestInitCmdBuild(samResource.getMatchingSe().getSamRevision(),
-                    verificationMode, poResource.getMatchingSe().isRev3_2ModeAvailable(),
-                    workKeyRecordNumber, workKeyKif, workKeyKVC, poDigestDataCache.get(0))
-                    .getApduRequest());
+            samApduRequestList
+                    .add(new DigestInitCmdBuild(samResource.getMatchingSe().getSamRevision(),
+                            verificationMode, poResource.getMatchingSe().isRev3_2ModeAvailable(),
+                            workKeyRecordNumber, workKeyKif, workKeyKVC, poDigestDataCache.get(0))
+                                    .getApduRequest());
             isDigestInitDone = true;
         }
 
@@ -327,7 +330,7 @@ class SamCommandsProcessor {
         /* clears cached commands once they have been processed */
         poDigestDataCache.clear();
 
-        if(addDigestClose) {
+        if (addDigestClose) {
             /*
              * Build and append Digest Close command
              */
@@ -397,8 +400,7 @@ class SamCommandsProcessor {
         }
 
         if (logger.isDebugEnabled()) {
-            logger.debug("SIGNATURE = {}",
-                    ByteArrayUtil.toHex(sessionTerminalSignature));
+            logger.debug("SIGNATURE = {}", ByteArrayUtil.toHex(sessionTerminalSignature));
         }
 
         return sessionTerminalSignature;
@@ -422,13 +424,11 @@ class SamCommandsProcessor {
 
         SeRequest samSeRequest = new SeRequest(samApduRequestList);
 
-        logger.trace("checkPoSignature: SAMREQUEST = {}",
-                samSeRequest);
+        logger.trace("checkPoSignature: SAMREQUEST = {}", samSeRequest);
 
         SeResponse samSeResponse = samReader.transmit(samSeRequest);
 
-        logger.trace("checkPoSignature: SAMRESPONSE = {}",
-                samSeResponse);
+        logger.trace("checkPoSignature: SAMRESPONSE = {}", samSeResponse);
 
         if (samSeResponse == null) {
             throw new KeypleCalypsoSecureSessionException("Null response received",
@@ -451,15 +451,12 @@ class SamCommandsProcessor {
                     new DigestAuthenticateRespPars(samApduResponseList.get(0));
             authenticationStatus = respPars.isSuccessful();
             if (authenticationStatus) {
-                logger.debug(
-                        "checkPoSignature: mutual authentication successful.");
+                logger.debug("checkPoSignature: mutual authentication successful.");
             } else {
-                logger.debug(
-                        "checkPoSignature: mutual authentication failure.");
+                logger.debug("checkPoSignature: mutual authentication failure.");
             }
         } else {
-            logger.debug(
-                    "checkPoSignature: no response to Digest Authenticate.");
+            logger.debug("checkPoSignature: no response to Digest Authenticate.");
             throw new IllegalStateException("No response to Digest Authenticate.");
         }
         return authenticationStatus;
@@ -485,7 +482,7 @@ class SamCommandsProcessor {
             isDiversificationDone = true;
         }
 
-        if(isDigesterInitialized) {
+        if (isDigesterInitialized) {
             /* Get the pending SAM ApduRequest and add it to the current ApduRequest list */
             samApduRequestList.addAll(getPendingSamRequests(false).getApduRequests());
         }

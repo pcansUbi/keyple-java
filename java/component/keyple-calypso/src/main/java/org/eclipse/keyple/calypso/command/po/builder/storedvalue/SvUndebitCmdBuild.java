@@ -12,6 +12,9 @@
 package org.eclipse.keyple.calypso.command.po.builder.storedvalue;
 
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.*;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvDebitRespPars;
@@ -28,6 +31,9 @@ public final class SvUndebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRes
 
     /** The command. */
     private static final CalypsoPoCommands command = CalypsoPoCommands.SV_UNDEBIT;
+    private static final Set<Integer> successfulStatusCodes =
+            new HashSet<Integer>(Arrays.asList(0x6200));
+
     private final PoClass poClass;
     private final PoRevision poRevision;
     /** apdu data array */
@@ -112,7 +118,8 @@ public final class SvUndebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRes
         System.arraycopy(undebitComplementaryData, 10, dataIn, 15,
                 undebitComplementaryData.length - 10);
 
-        this.request = setApduRequest(poClass.getValue(), command, p1, p2, dataIn, null);
+        this.request = setApduRequest(poClass.getValue(), command, p1, p2, dataIn, null,
+                successfulStatusCodes);
         if (extraInfo != null) {
             this.addSubName(extraInfo);
         }

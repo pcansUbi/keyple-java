@@ -610,9 +610,19 @@ public final class PoTransaction {
                 samCommandsProcessor.authenticatePoSignature(poCloseSessionPars.getSignatureLo());
 
         if (transactionResult) {
-            logger.debug("checkPoSignature: mutual authentication successful.");
+            if (poCommandsManager.isSvOperationPending()) {
+                // we check the SV status only if the session has been successfully closed
+                transactionResult = samCommandsProcessor
+                        .getSvCheckStatus(poCloseSessionPars.getPostponedData());
+                if (!transactionResult) {
+                    logger.error(
+                            "checkPoSignature: the mutual authentication was successful but the SV operation failed.");
+                }
+            } else {
+                logger.debug("checkPoSignature: mutual authentication successful.");
+            }
         } else {
-            logger.debug("checkPoSignature: mutual authentication failure.");
+            logger.error("checkPoSignature: mutual authentication failure.");
         }
 
         sessionState = SessionState.SESSION_CLOSED;
@@ -917,8 +927,7 @@ public final class PoTransaction {
                             || poBuilderParser.getCommandBuilder() instanceof SvUndebitCmdBuild) {
                         /* Append/Update/Write Record: response = 9000 */
                         apduResponses.add(new ApduResponse(ByteArrayUtil.fromHex("6200"), null));
-                    }
-                     else {
+                    } else {
                         /* Append/Update/Write Record: response = 9000 */
                         apduResponses.add(new ApduResponse(ByteArrayUtil.fromHex("9000"), null));
                     }

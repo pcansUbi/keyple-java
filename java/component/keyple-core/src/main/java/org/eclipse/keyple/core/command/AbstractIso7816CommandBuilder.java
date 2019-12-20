@@ -12,10 +12,9 @@
 package org.eclipse.keyple.core.command;
 
 
-import org.eclipse.keyple.core.seproxy.message.ApduRequest;
-
 import java.util.HashSet;
 import java.util.Set;
+import org.eclipse.keyple.core.seproxy.message.ApduRequest;
 
 /**
  * Iso7816 APDU command builder.
@@ -80,7 +79,8 @@ public abstract class AbstractIso7816CommandBuilder extends AbstractApduCommandB
      * @param le maximum number of bytes expected in the data field of the response to the command
      *        (set to 0 is the case where ingoing and outgoing are present. Let the lower layer to
      *        handle the actual length [case4])
-     * @param successfulStatusCodes the list of additional successful status codes for the current ApduRequest
+     * @param successfulStatusCodes the list of additional successful status codes for the current
+     *        ApduRequest
      * @return an ApduRequest
      */
     protected ApduRequest setApduRequest(byte cla, CommandsTable command, byte p1, byte p2,
@@ -140,7 +140,10 @@ public abstract class AbstractIso7816CommandBuilder extends AbstractApduCommandB
 
     /**
      * Alternative API for setApduRequest without successful code list (set to null)
-     * <p>This variant is useful for all commands that do not have an additional successful status code.
+     * <p>
+     * This variant is useful for all commands that do not have an additional successful status
+     * code.
+     * 
      * @param cla class of instruction
      * @param command instruction code
      * @param p1 instruction parameter 1
@@ -153,7 +156,7 @@ public abstract class AbstractIso7816CommandBuilder extends AbstractApduCommandB
      * @return an ApduRequest
      */
     protected ApduRequest setApduRequest(byte cla, CommandsTable command, byte p1, byte p2,
-                                         byte[] dataIn, Byte le) {
+            byte[] dataIn, Byte le) {
         return this.setApduRequest(cla, command, p1, p2, dataIn, le, null);
     }
 }

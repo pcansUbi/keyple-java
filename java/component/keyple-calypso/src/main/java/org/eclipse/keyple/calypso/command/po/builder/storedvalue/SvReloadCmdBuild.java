@@ -13,6 +13,9 @@ package org.eclipse.keyple.calypso.command.po.builder.storedvalue;
 
 
 import java.awt.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.*;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvReloadRespPars;
@@ -28,6 +31,9 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
 
     /** The command. */
     private static final CalypsoPoCommands command = CalypsoPoCommands.SV_RELOAD;
+    private static final Set<Integer> successfulStatusCodes =
+            new HashSet<Integer>(Arrays.asList(0x6200));
+
     private final PoClass poClass;
     private final PoRevision poRevision;
     /** apdu data array */
@@ -118,7 +124,8 @@ public final class SvReloadCmdBuild extends AbstractPoCommandBuilder<SvReloadRes
         System.arraycopy(reloadComplementaryData, 10, dataIn, 18,
                 reloadComplementaryData.length - 10);
 
-        this.request = setApduRequest(poClass.getValue(), command, p1, p2, dataIn, null);
+        this.request = setApduRequest(poClass.getValue(), command, p1, p2, dataIn, null,
+                successfulStatusCodes);
         if (extraInfo != null) {
             this.addSubName(extraInfo);
         }
