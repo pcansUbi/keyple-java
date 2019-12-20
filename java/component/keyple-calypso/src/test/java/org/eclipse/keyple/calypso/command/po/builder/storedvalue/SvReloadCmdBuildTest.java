@@ -28,8 +28,11 @@ public class SvReloadCmdBuildTest {
                 /* SAM ID + prepare SV Reload data */ ByteArrayUtil
                         .fromHex("AABBCCDD5566771234561122334455"),
                 new Exception().getStackTrace()[0].getMethodName());
-        String apdu = ByteArrayUtil.toHex(svReloadCmdBuild.getApduRequest().getBytes());
-        Assert.assertEquals("00B8556617771122F3AAEE0000013344AABBCCDD1234561122334455", apdu);
+        Assert.assertArrayEquals(
+                ByteArrayUtil.fromHex("00B8556617771122F3AAEE0000013344AABBCCDD1234561122334455"),
+                svReloadCmdBuild.getApduRequest().getBytes());
+        Assert.assertArrayEquals(ByteArrayUtil.fromHex("B8000017771122F3AAEE0000013344"),
+                svReloadCmdBuild.getSvReloadData());
     }
 
     @Test(expected = IllegalStateException.class)
@@ -86,6 +89,68 @@ public class SvReloadCmdBuildTest {
                 new Exception().getStackTrace()[0].getMethodName());
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void svReloadCmdBuild_mode_compat_illegal_date_1() {
+        // long date
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_1,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("112233"),
+                /* time */ ByteArrayUtil.fromHex("3344"), /* free */ ByteArrayUtil.fromHex("5566"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svReloadCmdBuild_mode_compat_illegal_date_2() {
+        // long date
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_1,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ null,
+                /* time */ ByteArrayUtil.fromHex("3344"), /* free */ ByteArrayUtil.fromHex("5566"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svReloadCmdBuild_mode_compat_illegal_time_1() {
+        // long date
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_1,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("334455"),
+                /* free */ ByteArrayUtil.fromHex("5566"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svReloadCmdBuild_mode_compat_illegal_time_2() {
+        // long date
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_1,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ null, /* free */ ByteArrayUtil.fromHex("5566"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svReloadCmdBuild_mode_compat_illegal_free_1() {
+        // long date
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_1,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("3344"),
+                /* free */ ByteArrayUtil.fromHex("556677"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svReloadCmdBuild_mode_compat_illegal_free_2() {
+        // long date
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_1,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("3344"), /* free */ null);
+    }
+
     @Test
     public void svReloadCmdBuild_mode_rev3_2_base() {
 
@@ -99,6 +164,8 @@ public class SvReloadCmdBuildTest {
         String apdu = ByteArrayUtil.toHex(svReloadCmdBuild.getApduRequest().getBytes());
         Assert.assertEquals("00B855661C771122F3AAEE0000013344AABBCCDD12345611223344556677889900",
                 apdu);
+        Assert.assertArrayEquals(ByteArrayUtil.fromHex("B800001C771122F3AAEE0000013344"),
+                svReloadCmdBuild.getSvReloadData());
     }
 
     @Test(expected = IllegalStateException.class)
@@ -213,5 +280,67 @@ public class SvReloadCmdBuildTest {
                 /* SAM ID + prepare SV Reload data */ ByteArrayUtil
                         .fromHex("AABBCCDD5566771234561122"),
                 new Exception().getStackTrace()[0].getMethodName());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svReloadCmdBuild_mode_rev3_2_illegal_date_1() {
+        // long date
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_2,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("112233"),
+                /* time */ ByteArrayUtil.fromHex("3344"), /* free */ ByteArrayUtil.fromHex("5566"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svReloadCmdBuild_mode_rev3_2_illegal_date_2() {
+        // long date
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_2,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ null,
+                /* time */ ByteArrayUtil.fromHex("3344"), /* free */ ByteArrayUtil.fromHex("5566"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svReloadCmdBuild_mode_rev3_2_illegal_time_1() {
+        // long date
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_2,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("334455"),
+                /* free */ ByteArrayUtil.fromHex("5566"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svReloadCmdBuild_mode_rev3_2_illegal_time_2() {
+        // long date
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_2,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ null, /* free */ ByteArrayUtil.fromHex("5566"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svReloadCmdBuild_mode_rev3_2_illegal_free_1() {
+        // long date
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_2,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("3344"),
+                /* free */ ByteArrayUtil.fromHex("556677"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svReloadCmdBuild_mode_rev3_2_illegal_free_2() {
+        // long date
+        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(PoClass.ISO, PoRevision.REV3_2,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("3344"), /* free */ null);
     }
 }

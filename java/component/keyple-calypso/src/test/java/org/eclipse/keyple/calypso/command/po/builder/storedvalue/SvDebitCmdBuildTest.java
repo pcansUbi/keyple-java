@@ -13,6 +13,8 @@ package org.eclipse.keyple.calypso.command.po.builder.storedvalue;
 
 import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.PoRevision;
+import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvDebitRespPars;
+import org.eclipse.keyple.core.seproxy.message.ApduResponse;
 import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.junit.Assert;
 import org.junit.Test;
@@ -105,6 +107,75 @@ public class SvDebitCmdBuildTest {
         String apdu = ByteArrayUtil.toHex(svDebitCmdBuild.getApduRequest().getBytes());
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void svDebitCmdBuild_mode_compat_illegal_date_1() {
+        // long date
+        SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_1,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("112233"),
+                /* time */ ByteArrayUtil.fromHex("3344"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svDebitCmdBuild_mode_compat_illegal_date_2() {
+        // long date
+        SvDebitCmdBuild svDebitCmdBuild =
+                new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_1, /* amount */ 1, /*
+                                                                                     * KVC
+                                                                                     */ (byte) 0xAA,
+                        /* date */ null, /* time */ ByteArrayUtil.fromHex("3344"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svDebitCmdBuild_mode_compat_illegal_time_1() {
+        // long date
+        SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_1,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("334455"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svDebitCmdBuild_mode_compat_illegal_time_2() {
+        // long date
+        SvDebitCmdBuild svDebitCmdBuild =
+                new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_1, /* amount */ 1, /*
+                                                                                     * KVC
+                                                                                     */ (byte) 0xAA,
+                        /* date */ ByteArrayUtil.fromHex("1122"), /* time */ null);
+    }
+
+    @Test
+    public void svDebitCmdBuild_mode_compat_get_debit_data() {
+        SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_1,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("3344"));
+        byte[] svDebitData = svDebitCmdBuild.getSvDebitData();
+        Assert.assertArrayEquals(ByteArrayUtil.fromHex("BA00001400FFFF11223344AA"), svDebitData);
+    }
+
+    @Test
+    public void svDebitCmdBuild_mode_compat_response_parser() {
+        SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_1,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("3344"));
+        byte[] svDebitData = svDebitCmdBuild.getSvDebitData();
+        svDebitCmdBuild.finalizeBuilder(
+                /* SAM ID + prepare SV Debit data */ ByteArrayUtil
+                        .fromHex("AABBCCDD5566771234561122334455"),
+                new Exception().getStackTrace()[0].getMethodName());
+        SvDebitRespPars svBuildCmdParser = svDebitCmdBuild
+                .createResponseParser(new ApduResponse(ByteArrayUtil.fromHex("1122339000"), null));
+        Assert.assertArrayEquals(ByteArrayUtil.fromHex("112233"),
+                svBuildCmdParser.getSignatureLo());
+    }
+
     @Test
     public void svDebitCmdBuild_mode_rev3_2_base() {
 
@@ -189,5 +260,74 @@ public class SvDebitCmdBuildTest {
                         .fromHex("AABBCCDD556677123456112233"),
                 new Exception().getStackTrace()[0].getMethodName());
         String apdu = ByteArrayUtil.toHex(svDebitCmdBuild.getApduRequest().getBytes());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svDebitCmdBuild_mode_rev3_2_illegal_date_1() {
+        // long date
+        SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_2,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("112233"),
+                /* time */ ByteArrayUtil.fromHex("3344"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svDebitCmdBuild_mode_rev3_2_illegal_date_2() {
+        // long date
+        SvDebitCmdBuild svDebitCmdBuild =
+                new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_2, /* amount */ 1, /*
+                                                                                     * KVC
+                                                                                     */ (byte) 0xAA,
+                        /* date */ null, /* time */ ByteArrayUtil.fromHex("3344"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svDebitCmdBuild_mode_rev3_2_illegal_time_1() {
+        // long date
+        SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_2,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("334455"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void svDebitCmdBuild_mode_rev3_2_illegal_time_2() {
+        // long date
+        SvDebitCmdBuild svDebitCmdBuild =
+                new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_2, /* amount */ 1, /*
+                                                                                     * KVC
+                                                                                     */ (byte) 0xAA,
+                        /* date */ ByteArrayUtil.fromHex("1122"), /* time */ null);
+    }
+
+    @Test
+    public void svDebitCmdBuild_mode_rev3_2_get_debit_data() {
+        SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_2,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("3344"));
+        byte[] svDebitData = svDebitCmdBuild.getSvDebitData();
+        Assert.assertArrayEquals(ByteArrayUtil.fromHex("BA00001900FFFF11223344AA"), svDebitData);
+    }
+
+    @Test
+    public void svDebitCmdBuild_mode_rev3_2_response_parser() {
+        SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_2,
+                /* amount */ 1, /*
+                                 * KVC
+                                 */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* time */ ByteArrayUtil.fromHex("3344"));
+        byte[] svDebitData = svDebitCmdBuild.getSvDebitData();
+        svDebitCmdBuild.finalizeBuilder(
+                /* SAM ID + prepare SV Debit data */ ByteArrayUtil
+                        .fromHex("AABBCCDD55667712345611223344556677889900"),
+                new Exception().getStackTrace()[0].getMethodName());
+        SvDebitRespPars svBuildCmdParser = svDebitCmdBuild.createResponseParser(
+                new ApduResponse(ByteArrayUtil.fromHex("1122334455669000"), null));
+        Assert.assertArrayEquals(ByteArrayUtil.fromHex("112233445566"),
+                svBuildCmdParser.getSignatureLo());
     }
 }
