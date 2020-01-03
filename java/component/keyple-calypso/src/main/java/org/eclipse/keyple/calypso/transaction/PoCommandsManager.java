@@ -24,10 +24,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * The PO command manager is used to keep builders and parsers between the time the commands are
- * created and the time the parsers have been used.
+ * created and the time the parsers are going to be used.
  * <p>
  * A flag (preparedCommandsProcessed) is used to manage the reset of the command list. It allows the
- * builders to be kept until the application creates a new list of commands.
+ * builders to be kept until the application creates a new list of commands. This flag is reset by
+ * calling the method notifyCommandsProcessed.
  */
 class PoCommandsManager {
     /* logger */
@@ -51,7 +52,7 @@ class PoCommandsManager {
     }
 
     /**
-     * Resets the list of builders/parsers if it has already been processed.
+     * Resets the list of builders/parsers (only if it has already been processed).
      * <p>
      * Clears the processed flag.
      */
@@ -64,10 +65,10 @@ class PoCommandsManager {
     }
 
     /**
-     * Add a regular command to the builders and parsers list.
+     * Add a regular command (all but the StoredValue commands) to the builders and parsers list.
      * <p>
      * Handle the clearing of the list if needed.
-     * 
+     *
      * @param commandBuilder the command builder
      * @return the index to retrieve the parser later
      */
@@ -96,9 +97,19 @@ class PoCommandsManager {
      * Add a StoredValue command to the builders and parsers list.
      * <p>
      * Handle the clearing of the list if needed.
-     * 
+     * <p>
+     * Set up a mini state machine to manage the scheduling of Stored Value commands keeping the
+     * position of the last SvGet/Operation in the command list.
+     * <p>
+     * The {@link SvOperation} and {@link SvAction} are also used to check the consistency of the SV
+     * process.
+     * <p>
+     * The svOperationPending flag is set when an SV operation (Reload/Debit/Undebit) command is
+     * added.
+     *
      * @param commandBuilder the StoredValue command builder
-     * @param svOperation the type of SV operation
+     * @param svOperation the type of the current SV operation (Realod/Debit/Undebit)
+     * @param svAction the SV action (do/undo)
      * @return the index to retrieve the parser later
      */
     int addStoredValueCommand(PoSvCommand commandBuilder, SvOperation svOperation,
@@ -154,9 +165,10 @@ class PoCommandsManager {
     }
 
     /**
-     * Keeps information that commands have been processed.
+     * Informs that the commands have been processed.
      * <p>
-     * Allows the delayed initialization of the command list.
+     * Just record the information. The initialization of the list of commands will be done only the
+     * next time a command is added, this allows access to the parsers contained in the list..
      */
     void notifyCommandsProcessed() {
         preparedCommandsProcessed = true;
