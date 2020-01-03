@@ -31,6 +31,15 @@ import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The SamCommandsProcessor class is dedicated to the management of commands sent to the SAM.
+ * <p>
+ * In particular, it manages the cryptographic computations related to the secure session (digest
+ * computation).
+ * <p>
+ * It also integrates the SAM commands used for Stored Value. In session, these need to be carefully
+ * synchronized with the digest calculation.
+ */
 class SamCommandsProcessor {
     private static final Logger logger = LoggerFactory.getLogger(SamCommandsProcessor.class);
 
@@ -44,11 +53,11 @@ class SamCommandsProcessor {
     /** The SAM resource */
     private final SamResource samResource;
     /** The Proxy reader to communicate with the SAM */
-    private ProxyReader samReader;
+    private final ProxyReader samReader;
     /** The PO resource */
     private final PoResource poResource;
     /** The security settings. */
-    private SecuritySettings securitySettings;
+    private final SecuritySettings securitySettings;
     /*
      * The digest data cache stores all PO data to be send to SAM during a Secure Session. The 1st
      * buffer is the data buffer to be provided with Digest Init. The following buffers are PO
@@ -68,7 +77,7 @@ class SamCommandsProcessor {
      * Constructor
      * 
      * @param samResource the SAM resource containing the SAM reader and the Calypso SAM information
-     * @param poResource the PO resource containg the PO reader and the Calypso PO information
+     * @param poResource the PO resource containing the PO reader and the Calypso PO information
      * @param securitySettings the security settings from the application layer
      */
     SamCommandsProcessor(SamResource samResource, PoResource poResource,
@@ -81,11 +90,21 @@ class SamCommandsProcessor {
 
     /**
      * Gets the terminal challenge
+     * <p>
+     * Performs key diversification if necessary by sending the SAM Select Diversifier command prior
+     * to the Get Challenge command. The diversification flag is set.
+     * <p>
+     * If the key diversification is already done, the Select Diversifier command is omitted.
+     * <p>
+     * The length of the challenge varies from one PO revision to another. This information can be
+     * found in the PoResource class field.
      * 
-     * @return
-     * @throws KeypleReaderException
+     * @return the terminal challenge as an array of bytes
+     * @throws KeypleReaderException if the communication with the SAM failed
+     * @throws KeypleCalypsoSecureSessionException if there is an error in the SAM response
      */
-    byte[] getSessionTerminalChallenge() throws KeypleReaderException {
+    byte[] getSessionTerminalChallenge()
+            throws KeypleReaderException, KeypleCalypsoSecureSessionException {
         /*
          * counts 'select diversifier' and 'get challenge' commands. At least get challenge is
          * present
@@ -96,8 +115,7 @@ class SamCommandsProcessor {
         List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
 
         if (logger.isDebugEnabled()) {
-            logger.debug(
-                    "getSessionTerminalChallenge => Identification: DFNAME = {}, SERIALNUMBER = {}",
+            logger.debug("Identification: DFNAME = {}, SERIALNUMBER = {}",
                     ByteArrayUtil.toHex(poResource.getMatchingSe().getDfName()),
                     ByteArrayUtil.toHex(samResource.getMatchingSe().getSerialNumber()));
         }
@@ -129,8 +147,7 @@ class SamCommandsProcessor {
         /* Build a SAM SeRequest */
         SeRequest samSeRequest = new SeRequest(samApduRequestList);
 
-        logger.trace("getSessionTerminalChallenge => identification: SAMSEREQUEST = {}",
-                samSeRequest);
+        logger.trace("identification: SAMSEREQUEST = {}", samSeRequest);
 
         /*
          * Transmit the SeRequest to the SAM and get back the SeResponse (list of ApduResponse)
@@ -138,14 +155,12 @@ class SamCommandsProcessor {
         SeResponse samSeResponse = samReader.transmit(samSeRequest);
 
         if (samSeResponse == null) {
-            throw new KeypleCalypsoSecureSessionException(
-                    "getSessionTerminalChallenge: null response received",
+            throw new KeypleCalypsoSecureSessionException("null response received",
                     KeypleCalypsoSecureSessionException.Type.SAM, samSeRequest.getApduRequests(),
                     null);
         }
 
-        logger.trace("getSessionTerminalChallenge => identification: SAMSERESPONSE = {}",
-                samSeResponse);
+        logger.trace("identification: SAMSERESPONSE = {}", samSeResponse);
 
         List<ApduResponse> samApduResponseList = samSeResponse.getApduResponses();
         byte[] sessionTerminalChallenge;
@@ -157,8 +172,7 @@ class SamCommandsProcessor {
                     new SamGetChallengeRespPars(samApduResponseList.get(numberOfSamCmd - 1));
             sessionTerminalChallenge = samChallengePars.getChallenge();
             if (logger.isDebugEnabled()) {
-                logger.debug(
-                        "getSessionTerminalChallenge => identification: TERMINALCHALLENGE = {}",
+                logger.debug("identification: TERMINALCHALLENGE = {}",
                         ByteArrayUtil.toHex(sessionTerminalChallenge));
             }
         } else {
@@ -183,12 +197,19 @@ class SamCommandsProcessor {
 
     /**
      * Initializes the digest computation process
+     * <p>
+     * Resets the digest data cache, then fills a first packet with the provided data (from open
+     * secure session).
+     * <p>
+     * Keeps the session parameters, sets the KIF if not defined
+     * <p>
+     * Note: there is no communication with the SAM here.
      *
      * @param sessionEncryption true if the session is encrypted
      * @param verificationMode true if the verification mode is active
      * @param workKeyKif the PO KIF
      * @param workKeyKVC the PO KVC
-     * @param digestData a first bunch of data to digest.
+     * @param digestData a first packet of data to digest.
      * @return true if the initialization is successful
      */
     boolean initializeDigester(PoTransaction.SessionAccessLevel accessLevel,
@@ -276,10 +297,18 @@ class SamCommandsProcessor {
     }
 
     /**
-     * Get a unique SAM request for the whole digest computation process.
-     *
-     * @return SeRequest all the ApduRequest to send to the SAM in order to get the terminal
-     *         signature
+     * Gets a single SAM request for all prepared SAM commands.
+     * <p>
+     * Builds all pending SAM commands related to the digest calculation process
+     * <ul>
+     * <li>Starts with a Digest Init command if not already done,
+     * <li>Adds as many Digest Update commands as there are packages in the cache,
+     * <li>Appends a Digest Close command if the addDigestClose flag is set to true.
+     * </ul>
+     * 
+     * @param addDigestClose indicates whether to add the Digest Close command
+     * @return a SeRequest containing all the ApduRequest to send to the SAM
+     * @throws IllegalStateException if digest cache is empty or containing a even number of packets
      */
     private SeRequest getPendingSamRequests(boolean addDigestClose) {
         int startIndex;
@@ -351,12 +380,13 @@ class SamCommandsProcessor {
      * executed.
      * 
      * @return the terminal signature
-     * @throws KeypleReaderException
+     * @throws KeypleReaderException if the communication with the SAM failed
+     * @throws KeypleCalypsoSecureSessionException if there is an error in the SAM response
      */
     byte[] getTerminalSignature() throws KeypleReaderException {
 
-        /* All SAM digest operations will now run at once. */
-        /* Get the SAM Digest request from the cache manager */
+        /* All remaining SAM digest operations will now run at once. */
+        /* Get the SAM Digest request including Digest Close from the cache manager */
         SeRequest samSeRequest = getPendingSamRequests(true);
 
         logger.trace("SAMREQUEST = {}", samSeRequest);
@@ -408,10 +438,13 @@ class SamCommandsProcessor {
 
     /**
      * Authenticates the signature part from the PO
+     * <p>
+     * Executes the Digest Authenticate command with the PO part of the signature.
      * 
-     * @param poSignatureLo the signature part from the PO
+     * @param poSignatureLo the PO part of the signature
      * @return true if the PO signature is correct
-     * @throws KeypleReaderException
+     * @throws KeypleReaderException if the communication with the SAM failed
+     * @throws KeypleCalypsoSecureSessionException if there is an error in the SAM response
      */
     boolean authenticatePoSignature(byte[] poSignatureLo) throws KeypleReaderException {
         /* Check the PO signature part with the SAM */
@@ -445,7 +478,7 @@ class SamCommandsProcessor {
         /* Get transaction result parsing the response */
         List<ApduResponse> samApduResponseList = samSeResponse.getApduResponses();
 
-        boolean authenticationStatus = false;
+        boolean authenticationStatus;
         if ((samApduResponseList != null) && !samApduResponseList.isEmpty()) {
             DigestAuthenticateRespPars respPars =
                     new DigestAuthenticateRespPars(samApduResponseList.get(0));
@@ -457,13 +490,23 @@ class SamCommandsProcessor {
             }
         } else {
             logger.debug("checkPoSignature: no response to Digest Authenticate.");
-            throw new IllegalStateException("No response to Digest Authenticate.");
+            throw new KeypleReaderException("No response to Digest Authenticate.");
         }
         return authenticationStatus;
     }
 
     /**
      * Generic method to get the complementary data from SvPrepareLoad/Debit/Undebit commands
+     * <p>
+     * Executes the SV Prepare SAM command to prepare the data needed to complete the PO SV command.
+     * <p>
+     * This data comprises:
+     * <ul>
+     * <li>The SAM identifier (4 bytes)
+     * <li>The SAM challenge (3 bytes)
+     * <li>The SAM transaction number (3 bytes)
+     * <li>The SAM part of the SV signature (5 or 10 bytes depending on PO mode)
+     * </ul>
      * 
      * @param svPrepareRequest the prepare command request (can be prepareSvReload/Debit/Undebit)
      * @return a byte array containing the complementary data
@@ -534,7 +577,7 @@ class SamCommandsProcessor {
      * @param svReloadCmdBuild the SvDebit builder providing the SvReload partial data
      * @return the complementary security data to finalize the SvDebit PO command (sam ID + SV
      *         prepare load output)
-     * @throws KeypleReaderException
+     * @throws KeypleReaderException if the communication with the SAM fails
      */
     byte[] getSvReloadComplementaryData(SvGetRespPars svGetResponseParser,
             SvReloadCmdBuild svReloadCmdBuild) throws KeypleReaderException {
@@ -558,7 +601,7 @@ class SamCommandsProcessor {
      * @param svDebitCmdBuild the SvDebit builder providing the SvUndebit partial data
      * @return the security data to finalize the SvDebit PO command (sam ID + SV prepare debit
      *         output)
-     * @throws KeypleReaderException
+     * @throws KeypleReaderException if the communication with the SAM fails
      */
     byte[] getSvDebitComplementaryData(SvGetRespPars svGetResponseParser,
             SvDebitCmdBuild svDebitCmdBuild) throws KeypleReaderException {
@@ -581,7 +624,7 @@ class SamCommandsProcessor {
      * @param svUndebitCmdBuild the SvUndebit builder providing the SvUndebit partial data
      * @return the security data to finalize the SvUndebit PO command (sam ID + SV prepare debit
      *         output)
-     * @throws KeypleReaderException
+     * @throws KeypleReaderException if the communication with the SAM fails
      */
     public byte[] getSvUndebitComplementaryData(SvGetRespPars svGetResponseParser,
             SvUndebitCmdBuild svUndebitCmdBuild) throws KeypleReaderException {
@@ -598,9 +641,9 @@ class SamCommandsProcessor {
      * <p>
      * The PO signature is compared by the SAM with the one it has computed on its side.
      * 
-     * @param svOperationResponseData
+     * @param svOperationResponseData the data of the SV operation performed
      * @return true if the SV check is successful
-     * @throws KeypleReaderException
+     * @throws KeypleReaderException if the communication with the SAM fails
      */
     boolean getSvCheckStatus(byte[] svOperationResponseData) throws KeypleReaderException {
         List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
