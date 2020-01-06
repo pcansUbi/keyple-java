@@ -57,8 +57,8 @@ public class PoCommandsManagerTest {
         updateRecordCmdBuilder =
                 new UpdateRecordCmdBuild(PoClass.ISO, sfi, (byte) 0x01, rec, "update record");
 
-        svGetCmdBuilder =
-                new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_1, SvOperation.DEBIT, "sv get");
+        svGetCmdBuilder = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_1,
+                SvSettings.Operation.DEBIT, "sv get");
 
         byte[] date = {(byte) 0x01, (byte) 0x02};
         byte[] time = {(byte) 0x03, (byte) 0x04};
@@ -110,23 +110,24 @@ public class PoCommandsManagerTest {
         /* nominal case */
         PoCommandsManager poCommandsManager = new PoCommandsManager();
         /* DO as default action expected */
-        Assert.assertEquals(SvAction.DO, poCommandsManager.getSvAction());
+        Assert.assertEquals(SvSettings.Action.DO, poCommandsManager.getSvAction());
         /* empty list expected */
         List<PoBuilderParser> parserList = poCommandsManager.getPoBuilderParserList();
         Assert.assertTrue(parserList.isEmpty());
         /* add SvGet */
-        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvOperation.RELOAD, SvAction.DO);
+        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvSettings.Operation.RELOAD,
+                SvSettings.Action.DO);
         /* 1 element expected */
         Assert.assertEquals(1, parserList.size());
         Assert.assertTrue(parserList.get(0).getCommandBuilder() instanceof SvGetCmdBuild);
-        Assert.assertEquals(SvAction.DO, poCommandsManager.getSvAction());
+        Assert.assertEquals(SvSettings.Action.DO, poCommandsManager.getSvAction());
         /* no SV operation at the moment */
         Assert.assertFalse(poCommandsManager.isSvOperationPending());
         /* simulate the processing of SvGet to allow the addition of an SV operation */
         poCommandsManager.notifyCommandsProcessed();
         /* add SV reload */
-        poCommandsManager.addStoredValueCommand(svReloadCmdBuilder, SvOperation.RELOAD,
-                SvAction.DO);
+        poCommandsManager.addStoredValueCommand(svReloadCmdBuilder, SvSettings.Operation.RELOAD,
+                SvSettings.Action.DO);
         /* SV operation pending expected */
         Assert.assertTrue(poCommandsManager.isSvOperationPending());
 
@@ -148,67 +149,71 @@ public class PoCommandsManagerTest {
         /* nominal case */
         PoCommandsManager poCommandsManager = new PoCommandsManager();
         /* DO as default action expected */
-        Assert.assertEquals(SvAction.DO, poCommandsManager.getSvAction());
+        Assert.assertEquals(SvSettings.Action.DO, poCommandsManager.getSvAction());
         /* empty list expected */
         List<PoBuilderParser> parserList = poCommandsManager.getPoBuilderParserList();
         Assert.assertTrue(parserList.isEmpty());
         /* add SvGet */
-        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvOperation.DEBIT, SvAction.UNDO);
+        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvSettings.Operation.DEBIT,
+                SvSettings.Action.UNDO);
         /* 1 element expected */
         Assert.assertEquals(1, parserList.size());
         Assert.assertTrue(parserList.get(0).getCommandBuilder() instanceof SvGetCmdBuild);
-        Assert.assertEquals(SvAction.UNDO, poCommandsManager.getSvAction());
+        Assert.assertEquals(SvSettings.Action.UNDO, poCommandsManager.getSvAction());
         /* simulate the processing of SvGet to allow the addition of an SV operation */
         poCommandsManager.notifyCommandsProcessed();
         /* add SV reload */
-        poCommandsManager.addStoredValueCommand(svUndebitCmdBuilder, SvOperation.UNDEBIT,
-                SvAction.UNDO);
+        poCommandsManager.addStoredValueCommand(svUndebitCmdBuilder, SvSettings.Operation.DEBIT,
+                SvSettings.Action.UNDO);
     }
 
     @Test(expected = IllegalStateException.class)
     public void addStoredValueCommand_illegalPosition_1() {
         /* SV get is not the last executed command before SV operation */
         PoCommandsManager poCommandsManager = new PoCommandsManager();
-        Assert.assertEquals(SvAction.DO, poCommandsManager.getSvAction());
+        Assert.assertEquals(SvSettings.Action.DO, poCommandsManager.getSvAction());
         List<PoBuilderParser> parserList = poCommandsManager.getPoBuilderParserList();
         Assert.assertTrue(parserList.isEmpty());
-        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvOperation.RELOAD, SvAction.DO);
+        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvSettings.Operation.RELOAD,
+                SvSettings.Action.DO);
         /* add append record after SV Get */
         poCommandsManager.addRegularCommand(appendRecordCmdBuilder);
         poCommandsManager.notifyCommandsProcessed();
-        poCommandsManager.addStoredValueCommand(svReloadCmdBuilder, SvOperation.RELOAD,
-                SvAction.DO);
+        poCommandsManager.addStoredValueCommand(svReloadCmdBuilder, SvSettings.Operation.RELOAD,
+                SvSettings.Action.DO);
     }
 
     @Test(expected = IllegalStateException.class)
     public void addStoredValueCommand_illegalPosition_2() {
         /* SV operation is not the first command in the command list */
         PoCommandsManager poCommandsManager = new PoCommandsManager();
-        Assert.assertEquals(SvAction.DO, poCommandsManager.getSvAction());
+        Assert.assertEquals(SvSettings.Action.DO, poCommandsManager.getSvAction());
         List<PoBuilderParser> parserList = poCommandsManager.getPoBuilderParserList();
         Assert.assertTrue(parserList.isEmpty());
-        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvOperation.RELOAD, SvAction.DO);
+        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvSettings.Operation.RELOAD,
+                SvSettings.Action.DO);
         poCommandsManager.notifyCommandsProcessed();
 
         /* add append record before SV Reload */
         poCommandsManager.addRegularCommand(appendRecordCmdBuilder);
-        poCommandsManager.addStoredValueCommand(svReloadCmdBuilder, SvOperation.RELOAD,
-                SvAction.DO);
+        poCommandsManager.addStoredValueCommand(svReloadCmdBuilder, SvSettings.Operation.RELOAD,
+                SvSettings.Action.DO);
     }
 
     @Test(expected = IllegalStateException.class)
     public void addStoredValueCommand_inconsistent_operation() {
         /* SV operation is not the first command in the command list */
         PoCommandsManager poCommandsManager = new PoCommandsManager();
-        Assert.assertEquals(SvAction.DO, poCommandsManager.getSvAction());
+        Assert.assertEquals(SvSettings.Action.DO, poCommandsManager.getSvAction());
         List<PoBuilderParser> parserList = poCommandsManager.getPoBuilderParserList();
         Assert.assertTrue(parserList.isEmpty());
-        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvOperation.DEBIT, SvAction.DO);
+        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvSettings.Operation.DEBIT,
+                SvSettings.Action.DO);
         poCommandsManager.notifyCommandsProcessed();
 
         /* SV Reload while SV Get targets SV Debit */
-        poCommandsManager.addStoredValueCommand(svReloadCmdBuilder, SvOperation.RELOAD,
-                SvAction.DO);
+        poCommandsManager.addStoredValueCommand(svReloadCmdBuilder, SvSettings.Operation.RELOAD,
+                SvSettings.Action.DO);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -248,7 +253,8 @@ public class PoCommandsManagerTest {
     public void getSvGetResponseParser() {
         /* nominal case */
         PoCommandsManager poCommandsManager = new PoCommandsManager();
-        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvOperation.DEBIT, SvAction.DO);
+        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvSettings.Operation.DEBIT,
+                SvSettings.Action.DO);
         AbstractPoResponseParser commandParser = poCommandsManager.getSvGetResponseParser();
         Assert.assertNull(commandParser);
         /* Create the parser */
@@ -299,7 +305,8 @@ public class PoCommandsManagerTest {
          */
         PoCommandsManager poCommandsManager = new PoCommandsManager();
         poCommandsManager.addRegularCommand(appendRecordCmdBuilder);
-        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvOperation.DEBIT, SvAction.DO);
+        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvSettings.Operation.DEBIT,
+                SvSettings.Action.DO);
         AbstractPoResponseParser svOperationParser =
                 poCommandsManager.getSvOperationResponseParser();
     }
@@ -312,11 +319,13 @@ public class PoCommandsManagerTest {
          * add SV Get to comply with the expected operation order: SVGet -> SVOperation
          * (load/debit/undebit)
          */
-        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvOperation.DEBIT, SvAction.DO);
+        poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvSettings.Operation.DEBIT,
+                SvSettings.Action.DO);
         /* simulate processing to ensure that the SV Operation is in first position */
         poCommandsManager.notifyCommandsProcessed();
         /* Add the SV operation builder */
-        poCommandsManager.addStoredValueCommand(svReloadCmdBuilder, SvOperation.DEBIT, SvAction.DO);
+        poCommandsManager.addStoredValueCommand(svReloadCmdBuilder, SvSettings.Operation.DEBIT,
+                SvSettings.Action.DO);
         /* Create the parser */
         PoBuilderParser poBuilderParser = poCommandsManager.getPoBuilderParserList().get(0);
         poBuilderParser.setResponseParser((AbstractPoResponseParser) (poBuilderParser

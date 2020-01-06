@@ -42,8 +42,8 @@ class PoCommandsManager {
     private boolean lastCommandIsSvGet;
     private int svGetIndex = -1;
     private int svOpIndex = -1;
-    private SvOperation svOperation;
-    private SvAction svAction = SvAction.DO;
+    private SvSettings.Operation svOperation;
+    private SvSettings.Action svAction = SvSettings.Action.DO;
     private boolean svOperationPending;
 
     PoCommandsManager() {
@@ -101,8 +101,8 @@ class PoCommandsManager {
      * Set up a mini state machine to manage the scheduling of Stored Value commands keeping the
      * position of the last SvGet/Operation in the command list.
      * <p>
-     * The {@link SvOperation} and {@link SvAction} are also used to check the consistency of the SV
-     * process.
+     * The {@link SvSettings.Operation} and {@link SvSettings.Action} are also used to check the
+     * consistency of the SV process.
      * <p>
      * The svOperationPending flag is set when an SV operation (Reload/Debit/Undebit) command is
      * added.
@@ -112,8 +112,8 @@ class PoCommandsManager {
      * @param svAction the SV action (do/undo)
      * @return the index to retrieve the parser later
      */
-    int addStoredValueCommand(PoSvCommand commandBuilder, SvOperation svOperation,
-            SvAction svAction) {
+    int addStoredValueCommand(PoSvCommand commandBuilder, SvSettings.Operation svOperation,
+            SvSettings.Action svAction) {
         /**
          * Reset the list if when preparing the first command after the last processing.
          * <p>
@@ -170,9 +170,9 @@ class PoCommandsManager {
     }
 
     /**
-     * @return the current {@link SvAction} (default is DO)
+     * @return the current {@link SvSettings.Action} (default is DO)
      */
-    public SvAction getSvAction() {
+    public SvSettings.Action getSvAction() {
         return svAction;
     }
 

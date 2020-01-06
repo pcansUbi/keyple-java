@@ -11,10 +11,9 @@
  ********************************************************************************/
 package org.eclipse.keyple.calypso.command.po.builder.storedvalue;
 
-import static org.junit.Assert.*;
 import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.PoRevision;
-import org.eclipse.keyple.calypso.transaction.SvOperation;
+import org.eclipse.keyple.calypso.transaction.SvSettings;
 import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.junit.Assert;
 import org.junit.Test;
@@ -23,7 +22,7 @@ public class SvGetCmdBuildTest {
     @Test
     public void svGetCmdBuild_mode_compat_reload() {
         SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_1,
-                SvOperation.RELOAD, new Exception().getStackTrace()[0].getMethodName());
+                SvSettings.Operation.RELOAD, new Exception().getStackTrace()[0].getMethodName());
 
         String cmdBytes = ByteArrayUtil.toHex(svGetCmdBuild.getApduRequest().getBytes());
 
@@ -33,17 +32,7 @@ public class SvGetCmdBuildTest {
     @Test
     public void svGetCmdBuild_mode_compat_debit() {
         SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_1,
-                SvOperation.DEBIT, new Exception().getStackTrace()[0].getMethodName());
-
-        String cmdBytes = ByteArrayUtil.toHex(svGetCmdBuild.getApduRequest().getBytes());
-
-        Assert.assertEquals("007C000900", cmdBytes);
-    }
-
-    @Test
-    public void svGetCmdBuild_mode_compat_undebit() {
-        SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_1,
-                SvOperation.UNDEBIT, new Exception().getStackTrace()[0].getMethodName());
+                SvSettings.Operation.DEBIT, new Exception().getStackTrace()[0].getMethodName());
 
         String cmdBytes = ByteArrayUtil.toHex(svGetCmdBuild.getApduRequest().getBytes());
 
@@ -53,20 +42,17 @@ public class SvGetCmdBuildTest {
     @Test
     public void svGetCmdBuild_mode_compat_get_sv_operation() {
         SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_1,
-                SvOperation.RELOAD, new Exception().getStackTrace()[0].getMethodName());
-        Assert.assertEquals(SvOperation.RELOAD, svGetCmdBuild.getSvOperation());
-        svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_1, SvOperation.DEBIT,
-                new Exception().getStackTrace()[0].getMethodName());
-        Assert.assertEquals(SvOperation.DEBIT, svGetCmdBuild.getSvOperation());
-        svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_1, SvOperation.UNDEBIT,
-                new Exception().getStackTrace()[0].getMethodName());
-        Assert.assertEquals(SvOperation.UNDEBIT, svGetCmdBuild.getSvOperation());
+                SvSettings.Operation.RELOAD, new Exception().getStackTrace()[0].getMethodName());
+        Assert.assertEquals(SvSettings.Operation.RELOAD, svGetCmdBuild.getSvOperation());
+        svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_1,
+                SvSettings.Operation.DEBIT, new Exception().getStackTrace()[0].getMethodName());
+        Assert.assertEquals(SvSettings.Operation.DEBIT, svGetCmdBuild.getSvOperation());
     }
 
     @Test
     public void svGetCmdBuild_mode_rev32_reload() {
         SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_2,
-                SvOperation.RELOAD, new Exception().getStackTrace()[0].getMethodName());
+                SvSettings.Operation.RELOAD, new Exception().getStackTrace()[0].getMethodName());
 
         String cmdBytes = ByteArrayUtil.toHex(svGetCmdBuild.getApduRequest().getBytes());
 
@@ -76,17 +62,7 @@ public class SvGetCmdBuildTest {
     @Test
     public void svGetCmdBuild_mode_rev32_debit() {
         SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_2,
-                SvOperation.DEBIT, new Exception().getStackTrace()[0].getMethodName());
-
-        String cmdBytes = ByteArrayUtil.toHex(svGetCmdBuild.getApduRequest().getBytes());
-
-        Assert.assertEquals("007C010900", cmdBytes);
-    }
-
-    @Test
-    public void svGetCmdBuild_mode_rev32_undebit() {
-        SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_2,
-                SvOperation.UNDEBIT, new Exception().getStackTrace()[0].getMethodName());
+                SvSettings.Operation.DEBIT, new Exception().getStackTrace()[0].getMethodName());
 
         String cmdBytes = ByteArrayUtil.toHex(svGetCmdBuild.getApduRequest().getBytes());
 
@@ -96,13 +72,10 @@ public class SvGetCmdBuildTest {
     @Test
     public void svGetCmdBuild_mode_rev32_get_sv_operation() {
         SvGetCmdBuild svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_2,
-                SvOperation.RELOAD, new Exception().getStackTrace()[0].getMethodName());
-        Assert.assertEquals(SvOperation.RELOAD, svGetCmdBuild.getSvOperation());
-        svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_2, SvOperation.DEBIT,
-                new Exception().getStackTrace()[0].getMethodName());
-        Assert.assertEquals(SvOperation.DEBIT, svGetCmdBuild.getSvOperation());
-        svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_2, SvOperation.UNDEBIT,
-                new Exception().getStackTrace()[0].getMethodName());
-        Assert.assertEquals(SvOperation.UNDEBIT, svGetCmdBuild.getSvOperation());
+                SvSettings.Operation.RELOAD, new Exception().getStackTrace()[0].getMethodName());
+        Assert.assertEquals(SvSettings.Operation.RELOAD, svGetCmdBuild.getSvOperation());
+        svGetCmdBuild = new SvGetCmdBuild(PoClass.ISO, PoRevision.REV3_2,
+                SvSettings.Operation.DEBIT, new Exception().getStackTrace()[0].getMethodName());
+        Assert.assertEquals(SvSettings.Operation.DEBIT, svGetCmdBuild.getSvOperation());
     }
 }

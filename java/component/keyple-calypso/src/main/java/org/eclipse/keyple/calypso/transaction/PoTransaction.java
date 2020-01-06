@@ -87,8 +87,6 @@ public final class PoTransaction {
     private int modificationsCounterMax;
     private int modificationsCounter;
 
-    private boolean svNegativeBalancesAllowed = false;
-
     private final PoCommandsManager poCommandsManager;
     private String lastError;
 
@@ -1664,7 +1662,7 @@ public final class PoTransaction {
      *        negative reload
      * @return the command index
      */
-    public int prepareSvGet(SvOperation svOperation, SvAction svAction) {
+    public int prepareSvGet(SvSettings.Operation svOperation, SvSettings.Action svAction) {
         /*
          * create and keep the PoBuilderParser, return the command index
          */
@@ -1708,8 +1706,8 @@ public final class PoTransaction {
         /*
          * create and keep the PoBuilderParser, return the command index
          */
-        return poCommandsManager.addStoredValueCommand(svReloadCmdBuild, SvOperation.RELOAD,
-                SvAction.DO);
+        return poCommandsManager.addStoredValueCommand(svReloadCmdBuild,
+                SvSettings.Operation.RELOAD, SvSettings.Action.DO);
     }
 
     /**
@@ -1729,7 +1727,7 @@ public final class PoTransaction {
      */
     public int prepareSvReload(int amount, byte[] date, byte[] time, byte[] free, String extraInfo)
             throws KeypleReaderException {
-        if (SvAction.UNDO.equals(poCommandsManager.getSvAction())) {
+        if (SvSettings.Action.UNDO.equals(poCommandsManager.getSvAction())) {
             amount = -amount;
         }
         return prepareSvReloadPriv(amount, date, time, free, extraInfo);
@@ -1771,10 +1769,11 @@ public final class PoTransaction {
      *         allowed (see allowSvNegativeBalances)
      * @throws KeypleReaderException in case of failure during the SAM communication
      */
-    private int prepareSvDebitPriv(int amount, byte[] date, byte[] time, String extraInfo)
+    private int prepareSvDebitPriv(int amount, byte[] date, byte[] time,
+            SvSettings.NegativeBalance negativeBalance, String extraInfo)
             throws KeypleReaderException {
 
-        if (!svNegativeBalancesAllowed
+        if (SvSettings.NegativeBalance.FORBIDDEN.equals(negativeBalance)
                 && (((SvGetRespPars) poCommandsManager.getSvGetResponseParser()).getBalance()
                         - amount) < 0) {
             throw new KeypleCalypsoSvException("Negative balances not allowed.");
@@ -1796,8 +1795,8 @@ public final class PoTransaction {
         /*
          * create and keep the PoBuilderParser, return the command index
          */
-        return poCommandsManager.addStoredValueCommand(svDebitCmdBuild, SvOperation.DEBIT,
-                SvAction.DO);
+        return poCommandsManager.addStoredValueCommand(svDebitCmdBuild, SvSettings.Operation.DEBIT,
+                SvSettings.Action.DO);
     }
 
     /**
@@ -1834,8 +1833,8 @@ public final class PoTransaction {
         /*
          * create and keep the PoBuilderParser, return the command index
          */
-        return poCommandsManager.addStoredValueCommand(svUndebitCmdBuild, SvOperation.DEBIT,
-                SvAction.UNDO);
+        return poCommandsManager.addStoredValueCommand(svUndebitCmdBuild,
+                SvSettings.Operation.DEBIT, SvSettings.Action.UNDO);
     }
 
     /**
@@ -1850,16 +1849,18 @@ public final class PoTransaction {
      *        when subtracted and 0..32768 when added.
      * @param date 2-byte free value
      * @param time 2-byte free value
+     * @param negativeBalance indicates whether negative balance is allowed or not
      * @param extraInfo extra information included in the logs (can be null or empty)
      * @return the command index
      * @throws KeypleCalypsoSvException if the balance were to turn negative and the negative
      *         balance is not allowed in the settings.
      * @throws KeypleReaderException in case of failure during the SAM communication
      */
-    public int prepareSvDebit(int amount, byte[] date, byte[] time, String extraInfo)
+    public int prepareSvDebit(int amount, byte[] date, byte[] time,
+            SvSettings.NegativeBalance negativeBalance, String extraInfo)
             throws KeypleReaderException {
-        if (SvAction.DO.equals(poCommandsManager.getSvAction())) {
-            return prepareSvDebitPriv(amount, date, time, extraInfo);
+        if (SvSettings.Action.DO.equals(poCommandsManager.getSvAction())) {
+            return prepareSvDebitPriv(amount, date, time, negativeBalance, extraInfo);
         } else {
             return prepareSvUndebitPriv(amount, date, time, extraInfo);
         }
@@ -1874,6 +1875,8 @@ public final class PoTransaction {
      * The information fields such as date and time are set to 0. The extraInfo field propagated in
      * Logs are automatically generated with the type of transaction and amount.
      * <p>
+     * Operations that would result in a negative balance are forbidden (SV Exception raised).
+     * <p>
      * Note: the key used is the debit key
      *
      * @param amount the amount to be subtracted or added, positive integer in the range 0..32767
@@ -1886,7 +1889,7 @@ public final class PoTransaction {
     public int prepareSvDebit(int amount) throws KeypleReaderException {
         byte[] zero = {0x00, 0x00};
         String extraInfo = poCommandsManager.getSvAction().toString() + " debit " + amount;
-        return prepareSvDebit(amount, zero, zero, extraInfo);
+        return prepareSvDebit(amount, zero, zero, SvSettings.NegativeBalance.FORBIDDEN, extraInfo);
     }
 
     /**
@@ -1908,15 +1911,5 @@ public final class PoTransaction {
      */
     public String getLastError() {
         return lastError;
-    }
-
-    /**
-     * Allow the SvDebit command to debit the SV even if the balance becomes negative
-     * <p>
-     * Otherwise calling the debit command with an amount greater than the balance will result in an
-     * SV exception.
-     */
-    public void allowSvNegativeBalances() {
-        svNegativeBalancesAllowed = true;
     }
 }

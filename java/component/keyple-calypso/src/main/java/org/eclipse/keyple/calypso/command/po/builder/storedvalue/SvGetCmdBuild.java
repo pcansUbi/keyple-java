@@ -15,7 +15,7 @@ package org.eclipse.keyple.calypso.command.po.builder.storedvalue;
 import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.*;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
-import org.eclipse.keyple.calypso.transaction.SvOperation;
+import org.eclipse.keyple.calypso.transaction.SvSettings;
 import org.eclipse.keyple.core.seproxy.message.ApduResponse;
 
 /**
@@ -28,7 +28,7 @@ public final class SvGetCmdBuild extends AbstractPoCommandBuilder<SvGetRespPars>
     /** The command. */
     private static final CalypsoPoCommands command = CalypsoPoCommands.SV_GET;
 
-    private final SvOperation svOperation;
+    private final SvSettings.Operation svOperation;
     private final byte[] header;
 
     /**
@@ -40,12 +40,12 @@ public final class SvGetCmdBuild extends AbstractPoCommandBuilder<SvGetRespPars>
      * @param extraInfo extra information included in the logs (can be null or empty)
      * @throws IllegalArgumentException - if the command is inconsistent
      */
-    public SvGetCmdBuild(PoClass poClass, PoRevision poRevision, SvOperation svOperation,
+    public SvGetCmdBuild(PoClass poClass, PoRevision poRevision, SvSettings.Operation svOperation,
             String extraInfo) {
         super(command, null);
         byte cla = poClass.getValue();
         byte p1 = poRevision == PoRevision.REV3_2 ? (byte) 0x01 : (byte) 0x00;
-        byte p2 = svOperation == SvOperation.RELOAD ? (byte) 0x07 : (byte) 0x09;
+        byte p2 = svOperation == SvSettings.Operation.RELOAD ? (byte) 0x07 : (byte) 0x09;
 
         this.request = setApduRequest(cla, command, p1, p2, null, (byte) 0x00);
         if (extraInfo != null) {
@@ -60,7 +60,7 @@ public final class SvGetCmdBuild extends AbstractPoCommandBuilder<SvGetRespPars>
         this.svOperation = svOperation;
     }
 
-    public SvOperation getSvOperation() {
+    public SvSettings.Operation getSvOperation() {
         return svOperation;
     }
 
