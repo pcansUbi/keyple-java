@@ -9,7 +9,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  ********************************************************************************/
-package org.eclipse.keyple.example.calypso.pc.usecase7;
+package org.eclipse.keyple.example.calypso.pc.Demo_StoredValueEnhanced;
 
 
 import java.text.SimpleDateFormat;
@@ -32,7 +32,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * <h1>Use Case ‘Calypso 7’ – Stored Value Enhanced (PC/SC)</h1>
+ * <h1>Demo – Stored Value operations using the enhanced API (outside secure session only)
+ * (PC/SC)</h1>
  */
 public class StoredValueEnhanced_Pcsc {
     private static final Logger logger = LoggerFactory.getLogger(StoredValueEnhanced_Pcsc.class);
@@ -110,9 +111,11 @@ public class StoredValueEnhanced_Pcsc {
             PoTransaction poTransaction = new PoTransaction(poResource, samResource,
                     CalypsoUtilities.getSecuritySettings());
 
-            int svGetIndexDebit = poTransaction.prepareSvGet(SvOperation.DEBIT, SvAction.DO);
+            int svGetIndexDebit =
+                    poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO);
 
-            int svGetIndexReload = poTransaction.prepareSvGet(SvOperation.RELOAD, SvAction.DO);
+            int svGetIndexReload =
+                    poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, SvSettings.Action.DO);
 
             if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
                 SvGetRespPars svGetRespPars =
@@ -158,12 +161,13 @@ public class StoredValueEnhanced_Pcsc {
         return false;
     }
 
-    private static boolean svReload(SvAction svAction, int amount) throws KeypleReaderException {
+    private static boolean svReload(SvSettings.Action svAction, int amount)
+            throws KeypleReaderException {
         if (selectPo()) {
             PoTransaction poTransaction = new PoTransaction(poResource, samResource,
                     CalypsoUtilities.getSecuritySettings());
 
-            int svGetIndex = poTransaction.prepareSvGet(SvOperation.RELOAD, svAction);
+            int svGetIndex = poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, svAction);
 
             if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
                 return false;
@@ -201,13 +205,14 @@ public class StoredValueEnhanced_Pcsc {
     }
 
 
-    private static boolean svDebit(SvAction svAction, int amount) throws KeypleReaderException {
+    private static boolean svDebit(SvSettings.Action svAction, int amount)
+            throws KeypleReaderException {
         if (selectPo()) {
             PoTransaction poTransaction = new PoTransaction(poResource, samResource,
                     CalypsoUtilities.getSecuritySettings());
 
             int svGetIndex;
-            svGetIndex = poTransaction.prepareSvGet(SvOperation.DEBIT, svAction);
+            svGetIndex = poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, svAction);
 
             if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
                 return false;
@@ -226,8 +231,8 @@ public class StoredValueEnhanced_Pcsc {
             datenow = ByteArrayUtil.fromHex(dateFormater.format(now));
             timenow = ByteArrayUtil.fromHex(timeFormater.format(now));
 
-            int svDebitIndex =
-                    poTransaction.prepareSvDebit(amount, datenow, timenow, "SvDebit: +" + amount);
+            int svDebitIndex = poTransaction.prepareSvDebit(amount, datenow, timenow,
+                    SvSettings.NegativeBalance.AUTHORIZED, "SvDebit: +" + amount);
 
             if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
                 if (poTransaction.isSuccessful()) {
@@ -300,7 +305,7 @@ public class StoredValueEnhanced_Pcsc {
                     amount = keyboard.nextInt();
                     logger.info("Reload amount = {}", amount);
                     try {
-                        svReload(SvAction.DO, amount);
+                        svReload(SvSettings.Action.DO, amount);
                     } catch (KeypleReaderException e) {
                         logger.error("DO SvReload raised an exception: {}", e.getMessage());
                     }
@@ -310,7 +315,7 @@ public class StoredValueEnhanced_Pcsc {
                     amount = keyboard.nextInt();
                     logger.info("Unreload amount = {}", amount);
                     try {
-                        svReload(SvAction.UNDO, amount);
+                        svReload(SvSettings.Action.UNDO, amount);
                     } catch (KeypleReaderException e) {
                         logger.error("UNDO SvReload raised an exception: {}", e.getMessage());
                     }
@@ -320,7 +325,7 @@ public class StoredValueEnhanced_Pcsc {
                     amount = keyboard.nextInt();
                     logger.info("Debit amount = {}", amount);
                     try {
-                        svDebit(SvAction.DO, amount);
+                        svDebit(SvSettings.Action.DO, amount);
                     } catch (KeypleReaderException e) {
                         logger.error("DO SvDebit raised an exception: {}", e.getMessage());
                     }
@@ -330,7 +335,7 @@ public class StoredValueEnhanced_Pcsc {
                     amount = keyboard.nextInt();
                     logger.info("Undebit amount = {}", amount);
                     try {
-                        svDebit(SvAction.UNDO, amount);
+                        svDebit(SvSettings.Action.UNDO, amount);
                     } catch (KeypleReaderException e) {
                         logger.error("UNDO SvDebit raised an exception: {}", e.getMessage());
                     }

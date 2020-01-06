@@ -9,7 +9,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  ********************************************************************************/
-package org.eclipse.keyple.example.calypso.pc.usecase6;
+package org.eclipse.keyple.example.calypso.pc.Demo_StoredValueEssential;
 
 
 import java.util.Scanner;
@@ -30,7 +30,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * <h1>Use Case ‘Calypso 6’ – Stored Value (PC/SC)</h1>
+ * <h1>Demo – Stored Value operations using the basic API (in and outside secure session)
+ * (PC/SC)</h1>
  */
 public class StoredValueEssential_Pcsc {
     private static final Logger logger = LoggerFactory.getLogger(StoredValueEssential_Pcsc.class);
@@ -107,7 +108,8 @@ public class StoredValueEssential_Pcsc {
      * @return true if the operation succeeded
      */
     private static boolean svView() throws KeypleReaderException {
-        int svGetIndexDebit = poTransaction.prepareSvGet(SvOperation.DEBIT, SvAction.DO);
+        int svGetIndexDebit =
+                poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO);
 
         if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
             SvGetRespPars svGetRespPars =
@@ -127,7 +129,8 @@ public class StoredValueEssential_Pcsc {
      * @throws KeypleReaderException
      */
     private static boolean svReload(int amount) throws KeypleReaderException {
-        int svGetIndex = poTransaction.prepareSvGet(SvOperation.RELOAD, SvAction.DO);
+        int svGetIndex =
+                poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, SvSettings.Action.DO);
 
         if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
             return false;
@@ -166,7 +169,8 @@ public class StoredValueEssential_Pcsc {
                         29, String.format("EnvironmentAndHolder (SFI=%02X))",
                                 CalypsoClassicInfo.SFI_EnvironmentAndHolder));
 
-        int svGetIndex = poTransaction.prepareSvGet(SvOperation.RELOAD, SvAction.DO);
+        int svGetIndex =
+                poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, SvSettings.Action.DO);
 
         logger.warn("Open session.");
         if (!poTransaction.processOpening(PoTransaction.ModificationMode.ATOMIC,
@@ -202,7 +206,8 @@ public class StoredValueEssential_Pcsc {
      * @throws KeypleReaderException
      */
     private static boolean svDebit(int amount) throws KeypleReaderException {
-        int svGetIndex = poTransaction.prepareSvGet(SvOperation.DEBIT, SvAction.DO);
+        int svGetIndex =
+                poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO);
 
         if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
             return false;
@@ -241,7 +246,8 @@ public class StoredValueEssential_Pcsc {
                         29, String.format("EnvironmentAndHolder (SFI=%02X))",
                                 CalypsoClassicInfo.SFI_EnvironmentAndHolder));
 
-        int svGetIndex = poTransaction.prepareSvGet(SvOperation.DEBIT, SvAction.DO);
+        int svGetIndex =
+                poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO);
 
         logger.warn("Open session.");
         if (!poTransaction.processOpening(PoTransaction.ModificationMode.ATOMIC,
