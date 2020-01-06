@@ -126,12 +126,7 @@ class PoCommandsManager {
         if (commandBuilder instanceof SvGetCmdBuild) {
             // SvGet
             svGetIndex = preparedCommandIndex;
-            // change debit to undebit if debit/undo
-            if (svOperation == SvOperation.DEBIT && svAction == SvAction.UNDO) {
-                this.svOperation = SvOperation.UNDEBIT;
-            } else {
-                this.svOperation = svOperation;
-            }
+            this.svOperation = svOperation;
             this.svAction = svAction;
             /* not an SV Get command */
             lastCommandIsSvGet = true;

@@ -12,12 +12,10 @@
 package org.eclipse.keyple.calypso.transaction;
 
 public enum SvOperation {
-    /** No operation */
-    NONE,
+    /** Get reload and debit logs */
+    INQUIRY,
     /** Increase the balance of the stored value */
     RELOAD,
     /** Decrease the balance of the stored value */
-    DEBIT,
-    /** Cancel the last increase the balance of the stored value */
-    UNDEBIT;
+    DEBIT;
 }

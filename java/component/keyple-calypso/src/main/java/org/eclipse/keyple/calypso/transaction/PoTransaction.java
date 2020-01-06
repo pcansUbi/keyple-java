@@ -1659,8 +1659,8 @@ public final class PoTransaction {
     /**
      * Prepares an SV operation or simply retrieves the current SV status
      *
-     * @param svOperation informs about the nature of the intended operation
-     * @param svAction the type of action: DO a debit or a positive reload, UNDO a undebit a
+     * @param svOperation informs about the nature of the intended operation: debit or reload
+     * @param svAction the type of action: DO a debit or a positive reload, UNDO an undebit or a
      *        negative reload
      * @return the command index
      */
@@ -1767,11 +1767,11 @@ public final class PoTransaction {
      * @throws KeypleCalypsoSvException if the balance were to turn negative and the negative
      *         balance is not allowed in the settings.
      * @throws KeypleCalypsoSvSecurityException in case of security issue
-     * @throws KeypleCalypsoSvException if the resulting balance became negative and this was not
+     * @throws KeypleCalypsoSvException if the resulting balance becomes negative and this is not
      *         allowed (see allowSvNegativeBalances)
      * @throws KeypleReaderException in case of failure during the SAM communication
      */
-    public int prepareSvDebitPriv(int amount, byte[] date, byte[] time, String extraInfo)
+    private int prepareSvDebitPriv(int amount, byte[] date, byte[] time, String extraInfo)
             throws KeypleReaderException {
 
         if (!svNegativeBalancesAllowed
@@ -1816,7 +1816,7 @@ public final class PoTransaction {
      * @throws KeypleReaderException in case of failure during the SAM communication TODO add
      *         specific exception
      */
-    public int prepareSvUndebitPriv(int amount, byte[] date, byte[] time, String extraInfo)
+    private int prepareSvUndebitPriv(int amount, byte[] date, byte[] time, String extraInfo)
             throws KeypleReaderException {
         // create the initial builder with the application data
         SvUndebitCmdBuild svUndebitCmdBuild = new SvUndebitCmdBuild(calypsoPo.getPoClass(),
@@ -1834,7 +1834,7 @@ public final class PoTransaction {
         /*
          * create and keep the PoBuilderParser, return the command index
          */
-        return poCommandsManager.addStoredValueCommand(svUndebitCmdBuild, SvOperation.UNDEBIT,
+        return poCommandsManager.addStoredValueCommand(svUndebitCmdBuild, SvOperation.DEBIT,
                 SvAction.UNDO);
     }
 
