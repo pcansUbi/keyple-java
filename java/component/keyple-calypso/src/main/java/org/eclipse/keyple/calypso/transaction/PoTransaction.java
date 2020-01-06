@@ -87,6 +87,8 @@ public final class PoTransaction {
     private int modificationsCounterMax;
     private int modificationsCounter;
 
+    private boolean svNegativeBalancesAllowed = false;
+
     private final PoCommandsManager poCommandsManager;
     private String lastError;
 
@@ -1765,10 +1767,19 @@ public final class PoTransaction {
      * @throws KeypleCalypsoSvException if the balance were to turn negative and the negative
      *         balance is not allowed in the settings.
      * @throws KeypleCalypsoSvSecurityException in case of security issue
+     * @throws KeypleCalypsoSvException if the resulting balance became negative and this was not
+     *         allowed (see allowSvNegativeBalances)
      * @throws KeypleReaderException in case of failure during the SAM communication
      */
     public int prepareSvDebitPriv(int amount, byte[] date, byte[] time, String extraInfo)
             throws KeypleReaderException {
+
+        if (!svNegativeBalancesAllowed
+                && (((SvGetRespPars) poCommandsManager.getSvGetResponseParser()).getBalance()
+                        - amount) < 0) {
+            throw new KeypleCalypsoSvException("Negative balances not allowed.");
+        }
+
         // create the initial builder with the application data
         SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(calypsoPo.getPoClass(),
                 calypsoPo.getRevision(), amount,
@@ -1892,7 +1903,20 @@ public final class PoTransaction {
         this.lastError = lastError;
     }
 
+    /**
+     * @return a string describing the last error encountered
+     */
     public String getLastError() {
         return lastError;
+    }
+
+    /**
+     * Allow the SvDebit command to debit the SV even if the balance becomes negative
+     * <p>
+     * Otherwise calling the debit command with an amount greater than the balance will result in an
+     * SV exception.
+     */
+    public void allowSvNegativeBalances() {
+        svNegativeBalancesAllowed = true;
     }
 }
