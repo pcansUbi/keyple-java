@@ -647,9 +647,9 @@ class SamCommandsProcessor {
      */
     boolean getSvCheckStatus(byte[] svOperationResponseData) throws KeypleReaderException {
         List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
-        AbstractApduCommandBuilder selectDiversifier = new SvCheckCmdBuild(
+        AbstractApduCommandBuilder svCheckCmdBuilder = new SvCheckCmdBuild(
                 samResource.getMatchingSe().getSamRevision(), svOperationResponseData);
-        samApduRequestList.add(selectDiversifier.getApduRequest());
+        samApduRequestList.add(svCheckCmdBuilder.getApduRequest());
 
         // build a SAM SeRequest
         SeRequest samSeRequest = new SeRequest(samApduRequestList);

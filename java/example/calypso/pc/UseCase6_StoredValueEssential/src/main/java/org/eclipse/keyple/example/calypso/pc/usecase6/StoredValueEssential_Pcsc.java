@@ -168,8 +168,6 @@ public class StoredValueEssential_Pcsc {
 
         int svGetIndex = poTransaction.prepareSvGet(SvOperation.RELOAD, SvAction.DO);
 
-
-
         logger.warn("Open session.");
         if (!poTransaction.processOpening(PoTransaction.ModificationMode.ATOMIC,
                 PoTransaction.SessionAccessLevel.SESSION_LVL_LOAD, (byte) 0, (byte) 0)) {
@@ -237,11 +235,11 @@ public class StoredValueEssential_Pcsc {
      * @throws KeypleReaderException
      */
     private static boolean svDebitInSession(int amount) throws KeypleReaderException {
-        // int readRecordIndex =
-        // poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_EnvironmentAndHolder,
-        // ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
-        // 29, String.format("EnvironmentAndHolder (SFI=%02X))",
-        // CalypsoClassicInfo.SFI_EnvironmentAndHolder));
+        int readRecordIndex =
+                poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_EnvironmentAndHolder,
+                        ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
+                        29, String.format("EnvironmentAndHolder (SFI=%02X))",
+                                CalypsoClassicInfo.SFI_EnvironmentAndHolder));
 
         int svGetIndex = poTransaction.prepareSvGet(SvOperation.DEBIT, SvAction.DO);
 
@@ -361,6 +359,8 @@ public class StoredValueEssential_Pcsc {
                             svReloadInSession(amount);
                         } catch (KeypleReaderException e) {
                             logger.error("DO SvReload raised an exception: {}", e.getMessage());
+                            // abort the current session
+                            poTransaction.processCancel(ChannelControl.CLOSE_AFTER);
                         }
                         break;
                     case 4:
@@ -371,6 +371,8 @@ public class StoredValueEssential_Pcsc {
                             svDebitInSession(amount);
                         } catch (KeypleReaderException e) {
                             logger.error("DO SvDebit raised an exception: {}", e.getMessage());
+                            // abort the current session
+                            poTransaction.processCancel(ChannelControl.CLOSE_AFTER);
                         }
                         break;
                     case 5:
