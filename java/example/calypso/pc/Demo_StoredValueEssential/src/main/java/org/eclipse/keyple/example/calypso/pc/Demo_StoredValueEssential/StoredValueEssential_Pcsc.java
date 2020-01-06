@@ -300,7 +300,7 @@ public class StoredValueEssential_Pcsc {
             throw new IllegalStateException("Bad PO or SAM reader setup");
         }
 
-        logger.info("=============== UseCase Calypso #6: Stored Value  ==================");
+        logger.info("=============== Demo Stored Value - Essential ==================");
         logger.info("= PO Reader  NAME = {}", poReader.getName());
         logger.info("= SAM Reader  NAME = {}", samResource.getSeReader().getName());
 

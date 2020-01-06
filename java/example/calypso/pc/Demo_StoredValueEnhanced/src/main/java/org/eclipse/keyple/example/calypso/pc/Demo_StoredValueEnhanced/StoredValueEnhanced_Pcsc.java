@@ -273,7 +273,7 @@ public class StoredValueEnhanced_Pcsc {
             throw new IllegalStateException("Bad PO or SAM reader setup");
         }
 
-        logger.info("=============== UseCase Calypso #6: Stored Value  ==================");
+        logger.info("=============== Demo Stored Value - Enhanced ==================");
         logger.info("= PO Reader  NAME = {}", poReader.getName());
         logger.info("= SAM Reader  NAME = {}", samResource.getSeReader().getName());
         boolean loop = true;
