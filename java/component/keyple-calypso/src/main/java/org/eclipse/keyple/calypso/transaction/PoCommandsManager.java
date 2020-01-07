@@ -210,15 +210,15 @@ class PoCommandsManager {
     }
 
     /**
-     * Returns the SvGet parser
+     * Returns the SvGet parser index
      * 
-     * @return the parser
+     * @return the parser index as an int
      */
-    public AbstractPoResponseParser getSvGetResponseParser() {
+    public int getSvGetResponseParserIndex() {
         if (svGetIndex < 0 || svGetIndex != poBuilderParserList.size() - 1) {
-            throw new IllegalStateException("No SvGet builder is available");
+            throw new IllegalStateException("No SvGet index is available");
         }
-        return poBuilderParserList.get(svGetIndex).getResponseParser();
+        return svGetIndex;
     }
 
     /**

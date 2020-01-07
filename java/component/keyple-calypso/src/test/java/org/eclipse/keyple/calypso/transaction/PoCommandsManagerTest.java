@@ -25,20 +25,14 @@ import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvUndebitCmdBui
 import org.eclipse.keyple.calypso.command.po.parser.AppendRecordRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvReloadRespPars;
-import org.eclipse.keyple.calypso.transaction.exception.KeypleCalypsoSvException;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.eclipse.keyple.core.seproxy.message.ApduResponse;
 import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class PoCommandsManagerTest {
-    /* logger */
-    private static final Logger logger = LoggerFactory.getLogger(PoCommandsManagerTest.class);
-
     private AppendRecordCmdBuild appendRecordCmdBuilder;
     private SvGetCmdBuild svGetCmdBuilder;
     private SvReloadCmdBuild svReloadCmdBuilder;
@@ -47,7 +41,7 @@ public class PoCommandsManagerTest {
     private SvUndebitCmdBuild svUndebitCmdBuilder;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         byte sfi = (byte) 0x07;
         byte[] rec = {(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
 
@@ -100,7 +94,6 @@ public class PoCommandsManagerTest {
          * illegal state exception when an SV command is added through the regular command channel
          */
         PoCommandsManager poCommandsManager = new PoCommandsManager();
-        List<PoBuilderParser> parserList = poCommandsManager.getPoBuilderParserList();
         /* add SvGet builder: raises an exception */
         poCommandsManager.addRegularCommand(svGetCmdBuilder);
     }
@@ -137,7 +130,7 @@ public class PoCommandsManagerTest {
                 .getCommandBuilder().createResponseParser(
                         new ApduResponse(ByteArrayUtil.fromHex("1122339000"), null))));
 
-        AbstractPoResponseParser svOperationParser = null;
+        AbstractPoResponseParser svOperationParser;
         svOperationParser = poCommandsManager.getSvOperationResponseParser();
         Assert.assertTrue(svOperationParser instanceof SvReloadRespPars);
         Assert.assertArrayEquals(ByteArrayUtil.fromHex("112233"),
@@ -246,7 +239,7 @@ public class PoCommandsManagerTest {
     public void getSvGetResponseParser_invalid() {
         /* no command */
         PoCommandsManager poCommandsManager = new PoCommandsManager();
-        poCommandsManager.getSvGetResponseParser();
+        poCommandsManager.getSvGetResponseParserIndex();
     }
 
     @Test
@@ -255,7 +248,8 @@ public class PoCommandsManagerTest {
         PoCommandsManager poCommandsManager = new PoCommandsManager();
         poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvSettings.Operation.DEBIT,
                 SvSettings.Action.DO);
-        AbstractPoResponseParser commandParser = poCommandsManager.getSvGetResponseParser();
+        AbstractPoResponseParser commandParser = (AbstractPoResponseParser) poCommandsManager
+                .getResponseParser(poCommandsManager.getSvGetResponseParserIndex());
         Assert.assertNull(commandParser);
         /* Create the parser */
         PoBuilderParser poBuilderParser = poCommandsManager.getPoBuilderParserList().get(0);
@@ -285,20 +279,20 @@ public class PoCommandsManagerTest {
                         /* Debit Balance (3) */ "001120" +
                         /* Debit SV TNum (2) */ "F568" +
                         /* Successful execution status word */ "9000"), null))));
-        commandParser = poCommandsManager.getSvGetResponseParser();
+        commandParser = (AbstractPoResponseParser) poCommandsManager
+                .getResponseParser(poCommandsManager.getSvGetResponseParserIndex());
         Assert.assertTrue(commandParser instanceof SvGetRespPars);
     }
 
     @Test(expected = IllegalStateException.class)
-    public void getSvOperationResponseParser_1() throws KeypleCalypsoSvException {
+    public void getSvOperationResponseParser_1() {
         /* illegal state exception when no parser is available */
         PoCommandsManager poCommandsManager = new PoCommandsManager();
-        AbstractPoResponseParser svOperationParser =
-                poCommandsManager.getSvOperationResponseParser();
+        poCommandsManager.getSvOperationResponseParser();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void getSvOperationResponseParser_2() throws KeypleCalypsoSvException {
+    public void getSvOperationResponseParser_2() {
         /*
          * illegal state exception when a regular parser is available but no SV operation parser is
          * available
@@ -307,12 +301,11 @@ public class PoCommandsManagerTest {
         poCommandsManager.addRegularCommand(appendRecordCmdBuilder);
         poCommandsManager.addStoredValueCommand(svGetCmdBuilder, SvSettings.Operation.DEBIT,
                 SvSettings.Action.DO);
-        AbstractPoResponseParser svOperationParser =
-                poCommandsManager.getSvOperationResponseParser();
+        poCommandsManager.getSvOperationResponseParser();
     }
 
     @Test
-    public void getSvOperationResponseParser_3() throws KeypleCalypsoSvException {
+    public void getSvOperationResponseParser_3() {
         /* nominal operation */
         PoCommandsManager poCommandsManager = new PoCommandsManager();
         /*

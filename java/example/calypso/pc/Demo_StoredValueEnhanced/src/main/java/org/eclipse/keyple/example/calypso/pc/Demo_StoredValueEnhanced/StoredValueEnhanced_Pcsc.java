@@ -111,48 +111,45 @@ public class StoredValueEnhanced_Pcsc {
             PoTransaction poTransaction = new PoTransaction(poResource, samResource,
                     CalypsoUtilities.getSecuritySettings());
 
-            int svGetIndexDebit =
-                    poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO);
-
-            int svGetIndexReload =
-                    poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, SvSettings.Action.DO);
+            poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO,
+                    SvSettings.LogRead.ALL);
 
             if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
-                SvGetRespPars svGetRespPars =
-                        ((SvGetRespPars) poTransaction.getResponseParser(svGetIndexDebit));
+                SvGetPoResponse svGetPoResponse = poTransaction.getSvGetPoResponse();
+
+                logger.info("| Balance = {}", svGetPoResponse.getBalance());
+                logger.info("| Transaction number = {}", svGetPoResponse.getTransactionNumber());
+                logger.info("| Current KVC = {}", svGetPoResponse.getCurrentKVC());
                 logger.info("+- DEBIT LOG ----------------------+");
-                logger.info("| SV balance = {}", svGetRespPars.getBalance());
-                logger.info("| Last debit amount = {}", svGetRespPars.getDebitLog().getAmount());
-                logger.info("| Last balance = {}", svGetRespPars.getDebitLog().getBalance());
+                logger.info("| Last debit amount = {}", svGetPoResponse.getDebitLog().getAmount());
+                logger.info("| Last balance = {}", svGetPoResponse.getDebitLog().getBalance());
                 logger.info("| Date = {}",
-                        ByteArrayUtil.toHex(svGetRespPars.getDebitLog().getDate()));
+                        ByteArrayUtil.toHex(svGetPoResponse.getDebitLog().getDate()));
                 logger.info("| Time = {}",
-                        ByteArrayUtil.toHex(svGetRespPars.getDebitLog().getTime()));
-                logger.info("| KVC = {}", svGetRespPars.getDebitLog().getKVC());
+                        ByteArrayUtil.toHex(svGetPoResponse.getDebitLog().getTime()));
+                logger.info("| KVC = {}", svGetPoResponse.getDebitLog().getKVC());
                 logger.info("| SamID = {}",
-                        ByteArrayUtil.toHex(svGetRespPars.getDebitLog().getSamID()));
+                        ByteArrayUtil.toHex(svGetPoResponse.getDebitLog().getSamID()));
                 logger.info("| SV transaction number = {}",
-                        svGetRespPars.getDebitLog().getSvTransactionNumber());
+                        svGetPoResponse.getDebitLog().getSvTransactionNumber());
                 logger.info("| SAM transaction number = {}",
-                        svGetRespPars.getDebitLog().getSamTransactionNumber());
-                svGetRespPars = ((SvGetRespPars) poTransaction.getResponseParser(svGetIndexReload));
+                        svGetPoResponse.getDebitLog().getSamTransactionNumber());
                 logger.info("+- RELOAD LOG ---------------------+");
-                logger.info("| SV balance = {}", svGetRespPars.getBalance());
-                logger.info("| Last reload amount = {}", svGetRespPars.getLoadLog().getAmount());
-                logger.info("| Last balance = {}", svGetRespPars.getLoadLog().getBalance());
+                logger.info("| Last reload amount = {}", svGetPoResponse.getLoadLog().getAmount());
+                logger.info("| Last balance = {}", svGetPoResponse.getLoadLog().getBalance());
                 logger.info("| Date = {}",
-                        ByteArrayUtil.toHex(svGetRespPars.getLoadLog().getDate()));
+                        ByteArrayUtil.toHex(svGetPoResponse.getLoadLog().getDate()));
                 logger.info("| Time = {}",
-                        ByteArrayUtil.toHex(svGetRespPars.getLoadLog().getTime()));
+                        ByteArrayUtil.toHex(svGetPoResponse.getLoadLog().getTime()));
                 logger.info("| Free = {}",
-                        ByteArrayUtil.toHex(svGetRespPars.getLoadLog().getFree()));
-                logger.info("| KVC = {}", svGetRespPars.getLoadLog().getKVC());
+                        ByteArrayUtil.toHex(svGetPoResponse.getLoadLog().getFree()));
+                logger.info("| KVC = {}", svGetPoResponse.getLoadLog().getKVC());
                 logger.info("| SamID = {}",
-                        ByteArrayUtil.toHex(svGetRespPars.getLoadLog().getSamID()));
+                        ByteArrayUtil.toHex(svGetPoResponse.getLoadLog().getSamID()));
                 logger.info("| SV transaction number = {}",
-                        svGetRespPars.getLoadLog().getSvTransactionNumber());
+                        svGetPoResponse.getLoadLog().getSvTransactionNumber());
                 logger.info("| SAM transaction number = {}",
-                        svGetRespPars.getLoadLog().getSamTransactionNumber());
+                        svGetPoResponse.getLoadLog().getSamTransactionNumber());
                 logger.info("+----------------------------------+");
                 return true;
             }
@@ -167,7 +164,8 @@ public class StoredValueEnhanced_Pcsc {
             PoTransaction poTransaction = new PoTransaction(poResource, samResource,
                     CalypsoUtilities.getSecuritySettings());
 
-            int svGetIndex = poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, svAction);
+            int svGetIndex = poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, svAction,
+                    SvSettings.LogRead.SINGLE);
 
             if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
                 return false;
@@ -212,7 +210,8 @@ public class StoredValueEnhanced_Pcsc {
                     CalypsoUtilities.getSecuritySettings());
 
             int svGetIndex;
-            svGetIndex = poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, svAction);
+            svGetIndex = poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, svAction,
+                    SvSettings.LogRead.SINGLE);
 
             if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
                 return false;

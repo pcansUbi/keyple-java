@@ -13,7 +13,6 @@ package org.eclipse.keyple.example.calypso.pc.usecase7;
 
 
 
-import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
 import org.eclipse.keyple.calypso.transaction.*;
 import org.eclipse.keyple.core.selection.MatchingSelection;
 import org.eclipse.keyple.core.selection.SeSelection;
@@ -22,6 +21,7 @@ import org.eclipse.keyple.core.seproxy.*;
 import org.eclipse.keyple.core.seproxy.exception.KeypleBaseException;
 import org.eclipse.keyple.core.seproxy.exception.KeypleReaderException;
 import org.eclipse.keyple.core.seproxy.protocol.SeCommonProtocols;
+import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.eclipse.keyple.example.common.calypso.pc.transaction.CalypsoUtilities;
 import org.eclipse.keyple.example.common.calypso.postructure.CalypsoClassicInfo;
 import org.eclipse.keyple.plugin.pcsc.PcscPluginFactory;
@@ -128,19 +128,28 @@ public class StoredValueDebitInSession_Pcsc {
             PoTransaction poTransaction = new PoTransaction(poResource, samResource,
                     CalypsoUtilities.getSecuritySettings());
 
-            /* SV Get step */
-            int svGetIndex =
-                    poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO);
+            /*
+             * SV Get step (the returned index can be ignored here since we have a dedicated method
+             * to get the output data)
+             */
+            poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO,
+                    SvSettings.LogRead.ALL);
 
             logger.warn("Open session.");
             if (poTransaction.processOpening(PoTransaction.ModificationMode.ATOMIC,
                     PoTransaction.SessionAccessLevel.SESSION_LVL_DEBIT, (byte) 0, (byte) 0)) {
-                SvGetRespPars svGetRespPars =
-                        ((SvGetRespPars) poTransaction.getResponseParser(svGetIndex));
-                logger.warn("SV balance = {}", svGetRespPars.getBalance());
-                logger.warn("Last debit amount = {}", svGetRespPars.getDebitLog().getAmount());
+                SvGetPoResponse svGetPoResponse = poTransaction.getSvGetPoResponse();
+                logger.warn("SV balance = {}", svGetPoResponse.getBalance());
+                logger.warn("Last debit amount = {}", svGetPoResponse.getDebitLog().getAmount());
+                /* Display the SAM ID used for the last reload operation (from the reload log) */
+                logger.warn("Last SAM ID for reload = {}",
+                        ByteArrayUtil.toHex(svGetPoResponse.getLoadLog().getSamID()));
 
-                int svReloadIndex = poTransaction.prepareSvDebit(10);
+                /*
+                 * SV Debit step: debit 10 units (the returned index can be ignored as we are not
+                 * expecting any output data)
+                 */
+                poTransaction.prepareSvDebit(10);
 
                 logger.warn("Close session.");
                 if (poTransaction.processClosing(ChannelControl.CLOSE_AFTER)) {

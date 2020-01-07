@@ -12,7 +12,6 @@
 package org.eclipse.keyple.example.calypso.pc.usecase6;
 
 
-import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
 import org.eclipse.keyple.calypso.transaction.*;
 import org.eclipse.keyple.core.selection.MatchingSelection;
 import org.eclipse.keyple.core.selection.SeSelection;
@@ -126,17 +125,22 @@ public class StoredValueReload_Pcsc {
             PoTransaction poTransaction = new PoTransaction(poResource, samResource,
                     CalypsoUtilities.getSecuritySettings());
 
-            /* SV Get step */
-            int svGetIndex =
-                    poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, SvSettings.Action.DO);
+            /*
+             * SV Get step (the returned index can be ignored here since we have a dedicated method
+             * to get the output data)
+             */
+            poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, SvSettings.Action.DO,
+                    SvSettings.LogRead.SINGLE);
 
             if (poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
-                SvGetRespPars svGetRespPars =
-                        ((SvGetRespPars) poTransaction.getResponseParser(svGetIndex));
-                logger.info("SV balance = {}", svGetRespPars.getBalance());
-                logger.info("Last reload amount = {}", svGetRespPars.getLoadLog().getAmount());
+                SvGetPoResponse svGetPoResponse = poTransaction.getSvGetPoResponse();
+                logger.info("SV balance = {}", svGetPoResponse.getBalance());
+                logger.info("Last reload amount = {}", svGetPoResponse.getLoadLog().getAmount());
 
-                /* SV Reload step: reload 10 units (ignore returned index) */
+                /*
+                 * SV Debit step: reload 10 units (the returned index can be ignored as we are not
+                 * expecting any output data)
+                 */
                 poTransaction.prepareSvReload(10);
 
                 if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {

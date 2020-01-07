@@ -39,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+
 /**
  * Portable Object Secure Session.
  *
@@ -86,6 +87,8 @@ public final class PoTransaction {
     private boolean modificationsCounterIsInBytes;
     private int modificationsCounterMax;
     private int modificationsCounter;
+
+    private boolean svDoubleGet;
 
     private final PoCommandsManager poCommandsManager;
     private String lastError;
@@ -1660,17 +1663,67 @@ public final class PoTransaction {
      * @param svOperation informs about the nature of the intended operation: debit or reload
      * @param svAction the type of action: DO a debit or a positive reload, UNDO an undebit or a
      *        negative reload
+     * @param logRead specifies whether both log files (reload and debit) are required or whether
+     *        only the log file corresponding to the current operation is requested.
      * @return the command index
      */
-    public int prepareSvGet(SvSettings.Operation svOperation, SvSettings.Action svAction) {
-        /*
-         * create and keep the PoBuilderParser, return the command index
-         */
-        return poCommandsManager
-                .addStoredValueCommand(
-                        new SvGetCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(),
-                                svOperation, "for " + svAction + "/" + svOperation),
-                        svOperation, svAction);
+    public int prepareSvGet(SvSettings.Operation svOperation, SvSettings.Action svAction,
+            SvSettings.LogRead logRead) {
+        if (SvSettings.LogRead.ALL.equals(logRead) && !calypsoPo.isRev3_2ModeAvailable()) {
+            /*
+             * both reload and debit logs are requested for a non rev3.2 PO add two SvGet commands
+             * (for RELOAD then for DEBIT) keep the index of the second one (used when parsing)
+             */
+            svDoubleGet = true;
+            poCommandsManager.addStoredValueCommand(
+                    new SvGetCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(),
+                            SvSettings.Operation.RELOAD, "for " + svAction + "/ RELOAD"),
+                    SvSettings.Operation.RELOAD, svAction);
+            return poCommandsManager.addStoredValueCommand(
+                    new SvGetCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(),
+                            SvSettings.Operation.DEBIT, "for " + svAction + "/ DEBIT"),
+                    SvSettings.Operation.DEBIT, svAction);
+        } else {
+            /*
+             * create and keep the requested PoBuilderParser, return the command index
+             */
+            svDoubleGet = false;
+            return poCommandsManager
+                    .addStoredValueCommand(
+                            new SvGetCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(),
+                                    svOperation, "for " + svAction + "/" + svOperation),
+                            svOperation, svAction);
+        }
+    }
+
+    /**
+     * Getter for the SV Get output data.
+     * <p>
+     * Depending on the parameter {@link SvSettings.LogRead} used when calling prepareSvGet and also
+     * the type of PO, the output data of this command can come from the result of two seperate
+     * APDUs.
+     * <p>
+     * This method takes this into account and provides a SvGetPoResponse object built from one or
+     * two SvGetRespPars.
+     * 
+     * @return a SvGetPoResponse object
+     */
+    public SvGetPoResponse getSvGetPoResponse() {
+        if (svDoubleGet) {
+            /*
+             * 2 SV Get commands have been performed: we use the two last parsers from the SV Get
+             * parser index
+             */
+            return new SvGetPoResponse(
+                    (SvGetRespPars) (poCommandsManager.getResponseParser(
+                            poCommandsManager.getSvGetResponseParserIndex() - 1)),
+                    (SvGetRespPars) (poCommandsManager
+                            .getResponseParser(poCommandsManager.getSvGetResponseParserIndex())));
+        } else {
+            /* 1 SV Get command have been performed */
+            return new SvGetPoResponse((SvGetRespPars) (poCommandsManager
+                    .getResponseParser(poCommandsManager.getSvGetResponseParserIndex())));
+        }
     }
 
     /**
@@ -1691,14 +1744,18 @@ public final class PoTransaction {
     private int prepareSvReloadPriv(int amount, byte[] date, byte[] time, byte[] free,
             String extraInfo) throws KeypleReaderException {
         // create the initial builder with the application data
-        SvReloadCmdBuild svReloadCmdBuild = new SvReloadCmdBuild(calypsoPo.getPoClass(),
-                calypsoPo.getRevision(), amount,
-                ((SvGetRespPars) poCommandsManager.getSvGetResponseParser()).getCurrentKVC(), date,
-                time, free);
+        SvReloadCmdBuild svReloadCmdBuild =
+                new SvReloadCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(), amount,
+                        ((SvGetRespPars) poCommandsManager
+                                .getResponseParser(poCommandsManager.getSvGetResponseParserIndex()))
+                                        .getCurrentKVC(),
+                        date, time, free);
 
         // get the security data from the SAM
         byte[] svReloadComplementaryData = samCommandsProcessor.getSvReloadComplementaryData(
-                (SvGetRespPars) poCommandsManager.getSvGetResponseParser(), svReloadCmdBuild);
+                (SvGetRespPars) poCommandsManager
+                        .getResponseParser(poCommandsManager.getSvGetResponseParserIndex()),
+                svReloadCmdBuild);
 
         // finalize the SvReload command builder with the data provided by the SAM
         svReloadCmdBuild.finalizeBuilder(svReloadComplementaryData, extraInfo);
@@ -1774,20 +1831,26 @@ public final class PoTransaction {
             throws KeypleReaderException {
 
         if (SvSettings.NegativeBalance.FORBIDDEN.equals(negativeBalance)
-                && (((SvGetRespPars) poCommandsManager.getSvGetResponseParser()).getBalance()
+                && (((SvGetRespPars) poCommandsManager
+                        .getResponseParser(poCommandsManager.getSvGetResponseParserIndex()))
+                                .getBalance()
                         - amount) < 0) {
             throw new KeypleCalypsoSvException("Negative balances not allowed.");
         }
 
         // create the initial builder with the application data
-        SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(calypsoPo.getPoClass(),
-                calypsoPo.getRevision(), amount,
-                ((SvGetRespPars) poCommandsManager.getSvGetResponseParser()).getCurrentKVC(), date,
-                time);
+        SvDebitCmdBuild svDebitCmdBuild =
+                new SvDebitCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(), amount,
+                        ((SvGetRespPars) poCommandsManager
+                                .getResponseParser(poCommandsManager.getSvGetResponseParserIndex()))
+                                        .getCurrentKVC(),
+                        date, time);
 
         // get the security data from the SAM
         byte[] svDebitComplementaryData = samCommandsProcessor.getSvDebitComplementaryData(
-                (SvGetRespPars) poCommandsManager.getSvGetResponseParser(), svDebitCmdBuild);
+                (SvGetRespPars) poCommandsManager
+                        .getResponseParser(poCommandsManager.getSvGetResponseParserIndex()),
+                svDebitCmdBuild);
 
         // finalize the SvReload command builder with the data provided by the SAM
         svDebitCmdBuild.finalizeBuilder(svDebitComplementaryData, extraInfo);
@@ -1818,14 +1881,18 @@ public final class PoTransaction {
     private int prepareSvUndebitPriv(int amount, byte[] date, byte[] time, String extraInfo)
             throws KeypleReaderException {
         // create the initial builder with the application data
-        SvUndebitCmdBuild svUndebitCmdBuild = new SvUndebitCmdBuild(calypsoPo.getPoClass(),
-                calypsoPo.getRevision(), amount,
-                ((SvGetRespPars) poCommandsManager.getSvGetResponseParser()).getCurrentKVC(), date,
-                time);
+        SvUndebitCmdBuild svUndebitCmdBuild =
+                new SvUndebitCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(), amount,
+                        ((SvGetRespPars) poCommandsManager
+                                .getResponseParser(poCommandsManager.getSvGetResponseParserIndex()))
+                                        .getCurrentKVC(),
+                        date, time);
 
         // get the security data from the SAM
         byte[] svUndebitComplementaryData = samCommandsProcessor.getSvUndebitComplementaryData(
-                (SvGetRespPars) poCommandsManager.getSvGetResponseParser(), svUndebitCmdBuild);
+                (SvGetRespPars) poCommandsManager
+                        .getResponseParser(poCommandsManager.getSvGetResponseParserIndex()),
+                svUndebitCmdBuild);
 
         // finalize the SvReload command builder with the data provided by the SAM
         svUndebitCmdBuild.finalizeBuilder(svUndebitComplementaryData, extraInfo);
