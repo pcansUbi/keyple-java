@@ -60,6 +60,7 @@ public class SvUndebitCmdBuildTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void svUndebitCmdBuild_mode_compat_negative_amount() {
+        /** @see Calypso Layer ID 8.02 (200108) */
         SvUndebitCmdBuild svUndebitCmdBuild = new SvUndebitCmdBuild(PoClass.ISO, PoRevision.REV3_1,
                 /* amount */ -1, /* KVC */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
                 /* time */ ByteArrayUtil.fromHex("3344"));
@@ -72,8 +73,9 @@ public class SvUndebitCmdBuildTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void svUndebitCmdBuild_mode_compat_overlimit_amount() {
+        /** @see Calypso Layer ID 8.02 (200108) */
         SvUndebitCmdBuild svUndebitCmdBuild = new SvUndebitCmdBuild(PoClass.ISO, PoRevision.REV3_1,
-                /* amount */ 32769, /* KVC */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
+                /* amount */ 32768, /* KVC */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
                 /* time */ ByteArrayUtil.fromHex("3344"));
         svUndebitCmdBuild.finalizeBuilder(
                 /* SAM ID + prepare SV Debit data */ ByteArrayUtil
@@ -205,6 +207,7 @@ public class SvUndebitCmdBuildTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void svUndebitCmdBuild_mode_rev3_2_negative_amount() {
+        /** @see Calypso Layer ID 8.02 (200108) */
         SvUndebitCmdBuild svUndebitCmdBuild = new SvUndebitCmdBuild(PoClass.ISO, PoRevision.REV3_2,
                 /* amount */ -1, /* KVC */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
                 /* time */ ByteArrayUtil.fromHex("3344"));
@@ -217,6 +220,7 @@ public class SvUndebitCmdBuildTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void svUndebitCmdBuild_mode_rev3_2_overlimit_amount() {
+        /** @see Calypso Layer ID 8.02 (200108) */
         SvUndebitCmdBuild svUndebitCmdBuild = new SvUndebitCmdBuild(PoClass.ISO, PoRevision.REV3_2,
                 /* amount */ 32769, /* KVC */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
                 /* time */ ByteArrayUtil.fromHex("3344"));

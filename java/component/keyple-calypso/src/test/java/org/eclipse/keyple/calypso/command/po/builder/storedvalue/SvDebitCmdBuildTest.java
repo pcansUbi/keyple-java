@@ -61,6 +61,7 @@ public class SvDebitCmdBuildTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void svDebitCmdBuild_mode_compat_negative_amount() {
+        /** @see Calypso Layer ID 8.02 (200108) */
         SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_1,
                 /* amount */ -1, /* KVC */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
                 /* time */ ByteArrayUtil.fromHex("3344"));
@@ -73,6 +74,7 @@ public class SvDebitCmdBuildTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void svDebitCmdBuild_mode_compat_overlimit_amount() {
+        /** @see Calypso Layer ID 8.02 (200108) */
         SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_1,
                 /* amount */ 32768, /* KVC */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
                 /* time */ ByteArrayUtil.fromHex("3344"));
@@ -216,6 +218,7 @@ public class SvDebitCmdBuildTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void svDebitCmdBuild_mode_rev3_2_negative_amount() {
+        /** @see Calypso Layer ID 8.02 (200108) */
         SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_2,
                 /* amount */ -1, /* KVC */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
                 /* time */ ByteArrayUtil.fromHex("3344"));
@@ -228,6 +231,7 @@ public class SvDebitCmdBuildTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void svDebitCmdBuild_mode_rev3_2_overlimit_amount() {
+        /** @see Calypso Layer ID 8.02 (200108) */
         SvDebitCmdBuild svDebitCmdBuild = new SvDebitCmdBuild(PoClass.ISO, PoRevision.REV3_2,
                 /* amount */ 32768, /* KVC */ (byte) 0xAA, /* date */ ByteArrayUtil.fromHex("1122"),
                 /* time */ ByteArrayUtil.fromHex("3344"));
