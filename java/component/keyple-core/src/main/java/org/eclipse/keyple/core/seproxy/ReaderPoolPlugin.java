@@ -12,6 +12,7 @@
 package org.eclipse.keyple.core.seproxy;
 
 import java.util.SortedSet;
+import org.eclipse.keyple.core.seproxy.exception.KeyplePluginException;
 
 /**
  * The ReaderPoolPlugin interface provides methods to handle the access to an undefined number of
@@ -42,8 +43,10 @@ public interface ReaderPoolPlugin extends ReaderPlugin {
      * @param groupReference the reference of the group to which the reader belongs (may be null
      *        depending on the implementation made)
      * @return a SeReader object
+     * @throws KeyplePluginException if the groupReference is missing or if there is no more
+     *         SeReader available for the groupReference
      */
-    SeReader allocateReader(String groupReference);
+    SeReader allocateReader(String groupReference) throws KeyplePluginException;
 
     /**
      * Releases a SeReader previously allocated with allocateReader.
@@ -52,6 +55,7 @@ public interface ReaderPoolPlugin extends ReaderPlugin {
      * allocateReader in order to free the resource.
      * 
      * @param seReader the SeReader to be released.
+     * @throws KeyplePluginException if the the seReader reference is unknown
      */
-    void releaseReader(SeReader seReader);
+    void releaseReader(SeReader seReader) throws KeyplePluginException;
 }
