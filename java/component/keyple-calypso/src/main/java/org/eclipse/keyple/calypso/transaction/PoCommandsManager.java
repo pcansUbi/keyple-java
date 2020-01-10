@@ -39,6 +39,7 @@ class PoCommandsManager {
     /** The command index, incremented each time a command is added */
     private int preparedCommandIndex;
     private boolean preparedCommandsProcessed;
+    private boolean secureSessionIsOpen;
     private boolean lastCommandIsSvGet;
     private int svGetIndex = -1;
     private int svOpIndex = -1;
@@ -49,6 +50,7 @@ class PoCommandsManager {
     PoCommandsManager() {
         preparedCommandsProcessed = true;
         svOperationPending = false;
+        secureSessionIsOpen = false;
     }
 
     /**
@@ -62,6 +64,16 @@ class PoCommandsManager {
             preparedCommandIndex = 0;
             preparedCommandsProcessed = false;
         }
+    }
+
+
+    /**
+     * Indicates whether a secure session is open or not.
+     * 
+     * @param secureSessionIsOpen true if a secure session is open
+     */
+    public void setSecureSessionIsOpen(boolean secureSessionIsOpen) {
+        this.secureSessionIsOpen = secureSessionIsOpen;
     }
 
     /**
@@ -138,14 +150,21 @@ class PoCommandsManager {
             }
 
             if (!lastCommandIsSvGet) {
+                /** @see Calypso Layer ID 8.07/8.08 (200108) */
                 throw new IllegalStateException("This SV command must follow an SV Get command");
             }
 
             // here we expect that the builder and the SV operation are consistent
             if (svOperation != this.svOperation) {
-                logger.error("SvGet operation = {}, current command = {}", this.svOperation,
+                logger.error("Sv operation = {}, current command = {}", this.svOperation,
                         svOperation);
                 throw new IllegalStateException("Inconsistent SV operation.");
+            }
+            if (secureSessionIsOpen && svOpIndex != -1) {
+                /** @see Calypso Layer ID 8.03 (200108) */
+                logger.error("Only one SV operation is allowed in a secure session");
+                throw new IllegalStateException(
+                        "Only one SV operation is allowed in a secure session");
             }
             svOpIndex = preparedCommandIndex;
             svOperationPending = true;

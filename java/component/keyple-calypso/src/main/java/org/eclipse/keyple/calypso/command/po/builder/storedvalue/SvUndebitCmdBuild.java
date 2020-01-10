@@ -55,7 +55,10 @@ public final class SvUndebitCmdBuild extends AbstractPoCommandBuilder<SvDebitRes
             byte[] date, byte[] time) {
         super(command, null);
 
-        /** @see Calypso Layer ID 8.02 (200108) */
+        /**
+         * @see Calypso Layer ID 8.02 (200108)
+         * @see Ticketing Layer Recommendations 170 (200108)
+         */
         if (amount < 0 || amount > 32767) {
             throw new IllegalArgumentException(
                     "Amount is outside allowed boundaries (0 <= amount <= 32767)");

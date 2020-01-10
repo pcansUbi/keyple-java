@@ -981,6 +981,9 @@ public final class PoTransaction {
         byte localOpeningRecordNumberToRead = openingRecordNumberToRead;
         boolean poProcessSuccess = true;
 
+        /* informs the command manager that a secure session has been opened. */
+        poCommandsManager.setSecureSessionIsOpen(true);
+
         /* create a sublist of PoBuilderParser to be sent atomically */
         List<PoBuilderParser> poAtomicCommandList = new ArrayList<PoBuilderParser>();
         for (PoBuilderParser poCommandElement : poCommandsManager.getPoBuilderParserList()) {
@@ -1301,6 +1304,9 @@ public final class PoTransaction {
 
         /* sets the flag indicating that the commands have been executed */
         poCommandsManager.notifyCommandsProcessed();
+
+        /* informs the command manager that the secure session has been closed. */
+        poCommandsManager.setSecureSessionIsOpen(false);
 
         return poProcessSuccess;
     }
@@ -1670,19 +1676,25 @@ public final class PoTransaction {
     public int prepareSvGet(SvSettings.Operation svOperation, SvSettings.Action svAction,
             SvSettings.LogRead logRead) {
         if (SvSettings.LogRead.ALL.equals(logRead) && !calypsoPo.isRev3_2ModeAvailable()) {
-            /*
-             * both reload and debit logs are requested for a non rev3.2 PO add two SvGet commands
-             * (for RELOAD then for DEBIT) keep the index of the second one (used when parsing)
+            /**
+             * @see Calypso Layer ID 8.09/8.10 (200108): both reload and debit logs are requested
+             *      for a non rev3.2 PO add two SvGet commands (for RELOAD then for DEBIT) keep the
+             *      index of the second one (used when parsing)
              */
             svDoubleGet = true;
-            poCommandsManager.addStoredValueCommand(
-                    new SvGetCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(),
-                            SvSettings.Operation.RELOAD, "for " + svAction + "/ RELOAD"),
-                    SvSettings.Operation.RELOAD, svAction);
-            return poCommandsManager.addStoredValueCommand(
-                    new SvGetCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(),
-                            SvSettings.Operation.DEBIT, "for " + svAction + "/ DEBIT"),
-                    SvSettings.Operation.DEBIT, svAction);
+            SvSettings.Operation operation1 =
+                    SvSettings.Operation.RELOAD.equals(svOperation) ? SvSettings.Operation.DEBIT
+                            : SvSettings.Operation.RELOAD;
+            poCommandsManager
+                    .addStoredValueCommand(
+                            new SvGetCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(),
+                                    operation1, "for " + svAction + "/ " + operation1),
+                            operation1, svAction);
+            return poCommandsManager
+                    .addStoredValueCommand(
+                            new SvGetCmdBuild(calypsoPo.getPoClass(), calypsoPo.getRevision(),
+                                    svOperation, "for " + svAction + "/ " + svOperation),
+                            svOperation, svAction);
         } else {
             /*
              * create and keep the requested PoBuilderParser, return the command index
