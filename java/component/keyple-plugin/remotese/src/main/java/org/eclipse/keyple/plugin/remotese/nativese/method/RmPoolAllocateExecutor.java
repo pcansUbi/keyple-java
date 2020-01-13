@@ -13,6 +13,7 @@ package org.eclipse.keyple.plugin.remotese.nativese.method;
 
 import org.eclipse.keyple.core.seproxy.ReaderPoolPlugin;
 import org.eclipse.keyple.core.seproxy.SeReader;
+import org.eclipse.keyple.core.seproxy.exception.KeypleReaderAllocationException;
 import org.eclipse.keyple.core.seproxy.message.SeResponse;
 import org.eclipse.keyple.plugin.remotese.rm.IRemoteMethodExecutor;
 import org.eclipse.keyple.plugin.remotese.rm.RemoteMethodName;
@@ -45,19 +46,26 @@ public class RmPoolAllocateExecutor implements IRemoteMethodExecutor {
         // Extract info from keypleDto
         JsonObject body = JsonParser.getGson().fromJson(keypleDto.getBody(), JsonObject.class);
         String groupReference = body.get("groupReference").getAsString();
+        try {
+            // Execute Remote Method
+            SeReader seReader = poolPlugin.allocateReader(groupReference);
 
-        // Execute Remote Method
-        SeReader seReader = poolPlugin.allocateReader(groupReference);
+            // Build Response
+            JsonObject bodyResp = new JsonObject();
+            bodyResp.addProperty("nativeReaderName", seReader.getName());
+            bodyResp.addProperty("transmissionMode", seReader.getTransmissionMode().name());
 
-        // Build Response
-        JsonObject bodyResp = new JsonObject();
-        bodyResp.addProperty("nativeReaderName", seReader.getName());
-        bodyResp.addProperty("transmissionMode", seReader.getTransmissionMode().name());
-
-        out = transportDto.nextTransportDTO(KeypleDtoHelper.buildResponse(getMethodName().getName(),
-                bodyResp.toString(), null, seReader.getName(), null, keypleDto.getTargetNodeId(),
-                keypleDto.getRequesterNodeId(), keypleDto.getId()));
-
+            out = transportDto.nextTransportDTO(
+                    KeypleDtoHelper.buildResponse(getMethodName().getName(), bodyResp.toString(),
+                            null, seReader.getName(), null, keypleDto.getTargetNodeId(),
+                            keypleDto.getRequesterNodeId(), keypleDto.getId()));
+        } catch (KeypleReaderAllocationException e) {
+            // if an exception occurs while allocating the reader, send it into a keypleDto to the
+            // Master
+            out = transportDto.nextTransportDTO(KeypleDtoHelper.ExceptionDTO(
+                    getMethodName().getName(), e, null, null, null, keypleDto.getTargetNodeId(),
+                    keypleDto.getRequesterNodeId(), keypleDto.getId()));
+        }
         return out;
     }
 }

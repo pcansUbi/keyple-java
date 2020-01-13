@@ -146,7 +146,8 @@ public class SamResourceManager {
      * @throws KeypleReaderException if a reader error occurs
      */
     public SamResource allocateSamResource(AllocationMode allocationMode,
-            SamIdentifier samIdentifier) throws KeypleReaderException {
+            SamIdentifier samIdentifier)
+            throws KeypleReaderException, KeypleReaderAllocationException {
         long maxBlockingDate = System.currentTimeMillis() + MAX_BLOCKING_TIME;
         boolean noSamResourceLogged = false;
         logger.debug("Allocating SAM reader channel...");
@@ -205,7 +206,7 @@ public class SamResourceManager {
      *
      * @param samResource the SAM resource reference to free
      */
-    public void freeSamResource(SamResource samResource) {
+    public void freeSamResource(SamResource samResource) throws KeypleReaderAllocationException {
         if (dynamicAllocationPlugin) {
             // virtually infinite number of readers
             logger.debug("Freeing HSM SAM resource.");
