@@ -17,6 +17,8 @@ import org.eclipse.keyple.calypso.command.po.*;
 import org.eclipse.keyple.calypso.command.po.builder.*;
 import org.eclipse.keyple.calypso.command.po.builder.security.AbstractOpenSessionCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.security.CloseSessionCmdBuild;
+import org.eclipse.keyple.calypso.command.po.builder.security.PinOperation;
+import org.eclipse.keyple.calypso.command.po.builder.security.VerifyPinCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvDebitCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvGetCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvReloadCmdBuild;
@@ -24,6 +26,7 @@ import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvUndebitCmdBui
 import org.eclipse.keyple.calypso.command.po.parser.*;
 import org.eclipse.keyple.calypso.command.po.parser.security.AbstractOpenSessionRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.security.CloseSessionRespPars;
+import org.eclipse.keyple.calypso.command.po.parser.security.VerifyPinRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
 import org.eclipse.keyple.calypso.transaction.exception.*;
 import org.eclipse.keyple.core.command.AbstractApduCommandBuilder;
@@ -1634,8 +1637,8 @@ public final class PoTransaction {
          * create and keep the PoBuilderParser, return the command index
          */
 
-        return createAndStoreCommandBuilder(new WriteRecordCmdBuild(calypsoPo.getPoClass(), sfi,
-                recordNumber, overwriteRecordData, extraInfo));
+        return poCommandsManager.addRegularCommand(new WriteRecordCmdBuild(calypsoPo.getPoClass(),
+                sfi, recordNumber, overwriteRecordData, extraInfo));
     }
 
     /**
@@ -1688,6 +1691,39 @@ public final class PoTransaction {
 
         return poCommandsManager.addRegularCommand(new DecreaseCmdBuild(calypsoPo.getPoClass(), sfi,
                 counterNumber, decValue, extraInfo));
+    }
+
+
+    /**
+     * Builds a Verify PIN command and add it to the list of commands to be sent with the next
+     * process command
+     * <p>
+     * Returns the associated response parser index.
+     *
+     * @param pin byte array containing the PIN digits
+     * @param pinTransmissionMode plain or encrypted
+     * @return the command index (input order, starting at 0)
+     */
+    public int prepareVerifyPin(byte[] pin, PinTransmissionMode pinTransmissionMode) {
+        /*
+         * create and keep the PoBuilderParser, return the command index
+         */
+        return poCommandsManager.addRegularCommand(new VerifyPinCmdBuild(calypsoPo.getPoClass(),
+                PinTransmissionMode.PLAIN.equals(pinTransmissionMode) ? PinOperation.SEND_PLAIN_PIN
+                        : PinOperation.SEND_ENCRYPTED_PIN,
+                pin));
+    }
+
+    /**
+     * Get the PIN presentation attempt counter
+     * 
+     * @param index the command index
+     * @return the counter value
+     */
+    public int getPinAttemptCounter(int index) {
+        VerifyPinRespPars verifyPinRespPars =
+                (VerifyPinRespPars) (poCommandsManager.getResponseParser(index));
+        return verifyPinRespPars.getRemainingAttemptCounter();
     }
 
     /**

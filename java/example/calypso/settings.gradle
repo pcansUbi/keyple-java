@@ -2,6 +2,8 @@ rootProject.name = 'calyspo-example'
 
 include 'pc'
 include 'pc:Demo_CalypsoClassic'
+include 'pc:Demo_StoredValueEssential'
+include 'pc:Demo_StoredValueEnhanced'
 include 'pc:UseCase1_ExplicitSelectionAid'
 include 'pc:UseCase2_DefaultSelectionNotification'
 include 'pc:UseCase3_Rev1Selection'
