@@ -54,14 +54,26 @@ public enum CalypsoPoCommands implements CommandsTable {
     /** The po decrease counter. */
     DECREASE("Decrease", (byte) 0x30),
 
-    /** The po decrease counter. */
+    /** The po select file. */
     SELECT_FILE("Select File", (byte) 0xA4),
 
     /* The po change key */
     CHANGE_KEY("Change Key", (byte) 0xD8),
 
     /* The po get data for traceability */
-    GET_DATA_TRACE("Get Data'Trace'", (byte) 0xCA);
+    GET_DATA_TRACE("Get Data'Trace'", (byte) 0xCA),
+
+    /* The po SV Get */
+    SV_GET("SV Get", (byte) 0x7C),
+
+    /* The po SV Debit */
+    SV_DEBIT("SV Debit", (byte) 0xBA),
+
+    /* The po SV Reload */
+    SV_RELOAD("SV Reload", (byte) 0xB8),
+
+    /* The po SV Undebit */
+    SV_UNDEBIT("SV Undebit", (byte) 0xBC);
 
     /** The name. */
     private final String name;

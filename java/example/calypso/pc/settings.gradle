@@ -1,8 +1,12 @@
 rootProject.name = 'calypso-pc-example'
 
 include 'Demo_CalypsoClassic'
+include 'Demo_StoredValueEssential'
+include 'Demo_StoredValueEnhanced'
 include 'UseCase1_ExplicitSelectionAid'
 include 'UseCase2_DefaultSelectionNotification'
 include 'UseCase3_Rev1Selection'
 include 'UseCase4_PoAuthentication'
 include 'UseCase5_MultipleSession'
+include 'UseCase6_StoredValueReload'
+include 'UseCase7_StoredValueDebitInSession'

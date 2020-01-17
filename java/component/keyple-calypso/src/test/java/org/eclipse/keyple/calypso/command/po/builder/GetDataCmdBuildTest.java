@@ -13,8 +13,11 @@ package org.eclipse.keyple.calypso.command.po.builder;
 
 
 import org.eclipse.keyple.calypso.command.PoClass;
-import org.eclipse.keyple.core.command.AbstractApduCommandBuilder;
+import org.eclipse.keyple.calypso.command.po.parser.GetDataFciRespPars;
+import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.eclipse.keyple.core.seproxy.message.ApduRequest;
+import org.eclipse.keyple.core.seproxy.message.ApduResponse;
+import org.eclipse.keyple.core.util.ByteArrayUtil;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -25,18 +28,28 @@ public class GetDataCmdBuildTest {
 
     @Test
     public void getDataFCICmdBuild() {
-        byte[] request = new byte[] {(byte) 0x94, (byte) 0xCA, (byte) 0x00, 0x6F, 0x00};
-        AbstractApduCommandBuilder apduCommandBuilder = new GetDataFciCmdBuild(PoClass.LEGACY);
-        ApduRequest apduReq = apduCommandBuilder.getApduRequest();
+        byte[] request = ByteArrayUtil.fromHex("94CA006F00");
+        GetDataFciCmdBuild getDataFciCmdBuild = new GetDataFciCmdBuild(PoClass.LEGACY);
+        ApduRequest apduReq = getDataFciCmdBuild.getApduRequest();
         Assert.assertArrayEquals(request, apduReq.getBytes());
+        AbstractApduResponseParser abstractApduResponseParser =
+                getDataFciCmdBuild.createResponseParser(new ApduResponse(ByteArrayUtil.fromHex(
+                        "6F 24 84 0A 00112233445566778899 A5 16 BF0C 13 C7 08 AABBCCDDEEFF0011 53 07 0B55AA55AA55AA9000"),
+                        null));
+        Assert.assertTrue(abstractApduResponseParser instanceof GetDataFciRespPars);
     }
 
 
     @Test
     public void getDataFCICmdBuild2() {
-        byte[] request2 = new byte[] {(byte) 0x00, (byte) 0xCA, (byte) 0x00, 0x6F, 0x00};
-        AbstractApduCommandBuilder apduCommandBuilder = new GetDataFciCmdBuild(PoClass.ISO);
-        ApduRequest apduReq = apduCommandBuilder.getApduRequest();
+        byte[] request2 = ByteArrayUtil.fromHex("00CA006F00");
+        GetDataFciCmdBuild getDataFciCmdBuild = new GetDataFciCmdBuild(PoClass.ISO);
+        ApduRequest apduReq = getDataFciCmdBuild.getApduRequest();
         Assert.assertArrayEquals(request2, apduReq.getBytes());
+        AbstractApduResponseParser abstractApduResponseParser =
+                getDataFciCmdBuild.createResponseParser(new ApduResponse(ByteArrayUtil.fromHex(
+                        "6F 24 84 0A 00112233445566778899 A5 16 BF0C 13 C7 08 AABBCCDDEEFF0011 53 07 0B55AA55AA55AA9000"),
+                        null));
+        Assert.assertTrue(abstractApduResponseParser instanceof GetDataFciRespPars);
     }
 }

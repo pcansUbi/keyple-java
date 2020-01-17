@@ -18,7 +18,7 @@ import org.eclipse.keyple.calypso.command.CalypsoBuilderParser;
  * <p>
  * A setter allows to associate the parser object.
  */
-public class PoBuilderParser<T>
+public class PoBuilderParser
         implements CalypsoBuilderParser<AbstractPoCommandBuilder, AbstractPoResponseParser> {
     private final AbstractPoCommandBuilder poCommandBuilder;
     private AbstractPoResponseParser poResponseParser;
