@@ -11,6 +11,8 @@
  ********************************************************************************/
 package org.eclipse.keyple.calypso.command.po;
 
+import org.eclipse.keyple.calypso.PoData;
+import org.eclipse.keyple.calypso.PoVoid;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.eclipse.keyple.core.seproxy.message.ApduResponse;
 
@@ -22,5 +24,16 @@ public abstract class AbstractPoResponseParser extends AbstractApduResponseParse
      */
     public AbstractPoResponseParser(ApduResponse response) {
         super(response);
+    }
+
+    /**
+     * The method returns the data involve with the current comment.
+     * <p>
+     * It must be overloaded by all commands that read or modify the PO's non-volatile memory.
+     * 
+     * @return an object implementing the {@link PoData} interface
+     */
+    public PoData getPoData() {
+        return new PoVoid();
     }
 }

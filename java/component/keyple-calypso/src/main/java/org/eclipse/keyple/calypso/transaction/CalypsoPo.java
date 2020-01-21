@@ -13,6 +13,10 @@ package org.eclipse.keyple.calypso.transaction;
 
 
 
+import java.util.HashMap;
+import java.util.Map;
+import org.eclipse.keyple.calypso.PoData;
+import org.eclipse.keyple.calypso.PoFile;
 import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.PoRevision;
 import org.eclipse.keyple.calypso.command.po.parser.GetDataFciRespPars;
@@ -65,6 +69,8 @@ public final class CalypsoPo extends AbstractMatchingSe {
     private byte[] poAtr;
     private int modificationsCounterMax;
     private boolean modificationCounterIsInBytes = true;
+    private Map<Byte, PoFile> files = new HashMap<Byte, PoFile>();
+    private static PoFile NOT_FOUND = new PoFile((byte) 0, (byte) 0, null, "Not found");
 
     /**
      * Constructor.
@@ -420,5 +426,40 @@ public final class CalypsoPo extends AbstractMatchingSe {
             }
             return PoClass.ISO;
         }
+    }
+
+    protected void updatePoData(PoData poData) {
+        switch (poData.getType()) {
+            case VOID:
+                break;
+            case FILE:
+                PoFile poFile = getPoFile(((PoFile) poData).getSfi());
+                if (NOT_FOUND.equals(poFile)) {
+                    files.put(((PoFile) poData).getSfi(), (PoFile) poData);
+                } else {
+                    poFile.setRecords(((PoFile) poData).getRecords());
+                }
+                break;
+            case COUNTER:
+                break;
+            case PIN_STATUS:
+                break;
+            case SV_STATUS:
+                break;
+        }
+    }
+
+    /**
+     * Retrieves the file from the PoFile Map if it exists
+     * 
+     * @param sfi the short file identifier
+     * @return a PoFile (may be NOT_FOUND)
+     */
+    public PoFile getPoFile(byte sfi) {
+        PoFile poFile = files.get(sfi);
+        if (poFile == null) {
+            return NOT_FOUND;
+        }
+        return poFile;
     }
 }

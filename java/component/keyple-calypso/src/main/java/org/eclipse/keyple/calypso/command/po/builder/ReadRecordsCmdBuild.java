@@ -29,6 +29,7 @@ public final class ReadRecordsCmdBuild extends AbstractPoCommandBuilder<ReadReco
     /** The command. */
     private static final CalypsoPoCommands command = CalypsoPoCommands.READ_RECORDS;
 
+    private final byte sfi;
     private final byte firstRecordNumber;
     private final ReadDataStructure readDataStructure;
 
@@ -55,6 +56,7 @@ public final class ReadRecordsCmdBuild extends AbstractPoCommandBuilder<ReadReco
             throw new IllegalArgumentException("Bad record number (< 1)");
         }
 
+        this.sfi = sfi;
         this.firstRecordNumber = firstRecordNumber;
         this.readDataStructure = readDataStructure;
 
@@ -92,6 +94,6 @@ public final class ReadRecordsCmdBuild extends AbstractPoCommandBuilder<ReadReco
 
     @Override
     public ReadRecordsRespPars createResponseParser(ApduResponse apduResponse) {
-        return new ReadRecordsRespPars(apduResponse, readDataStructure, firstRecordNumber);
+        return new ReadRecordsRespPars(apduResponse, readDataStructure, sfi, firstRecordNumber);
     }
 }

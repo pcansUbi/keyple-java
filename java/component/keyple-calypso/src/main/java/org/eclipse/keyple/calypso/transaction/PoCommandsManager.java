@@ -17,6 +17,7 @@ import org.eclipse.keyple.calypso.command.po.AbstractPoCommandBuilder;
 import org.eclipse.keyple.calypso.command.po.AbstractPoResponseParser;
 import org.eclipse.keyple.calypso.command.po.PoBuilderParser;
 import org.eclipse.keyple.calypso.command.po.PoSvCommand;
+import org.eclipse.keyple.calypso.command.po.builder.security.VerifyPinCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvGetCmdBuild;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.slf4j.Logger;
@@ -43,6 +44,7 @@ class PoCommandsManager {
     private boolean lastCommandIsSvGet;
     private int svGetIndex = -1;
     private int svOpIndex = -1;
+    private int verifyPinIndex = -1;
     private SvSettings.Operation svOperation;
     private SvSettings.Action svAction = SvSettings.Action.DO;
     private boolean svOperationPending;
@@ -63,6 +65,7 @@ class PoCommandsManager {
             poBuilderParserList.clear();
             preparedCommandIndex = 0;
             preparedCommandsProcessed = false;
+            verifyPinIndex = -1;
         }
     }
 
@@ -179,6 +182,22 @@ class PoCommandsManager {
     }
 
     /**
+     * Add a VerifyPin command to the builders and parsers list.
+     * <p>
+     * Keep the resulting index in order to be able to retrieve the parser later.
+     * <p>
+     * The VerifyPin command index defined here will be reset each time a new command block is
+     * added.
+     * 
+     * @param commandBuilder the Verify PIN command builder
+     * @return the command index
+     */
+    int addVerifyPinCommand(VerifyPinCmdBuild commandBuilder) {
+        verifyPinIndex = addRegularCommand(commandBuilder);
+        return verifyPinIndex;
+    }
+
+    /**
      * Informs that the commands have been processed.
      * <p>
      * Just record the information. The initialization of the list of commands will be done only the
@@ -250,5 +269,17 @@ class PoCommandsManager {
             throw new IllegalStateException("Illegal SV operation parser index: " + svOpIndex);
         }
         return poBuilderParserList.get(svOpIndex).getResponseParser();
+    }
+
+    /**
+     * Returns the VerifyPin parser index
+     *
+     * @return the parser index as an int
+     */
+    public int getVerifyPinParserIndex() {
+        if (verifyPinIndex < 0 || verifyPinIndex != poBuilderParserList.size() - 1) {
+            throw new IllegalStateException("No VerifyPin index is available");
+        }
+        return verifyPinIndex;
     }
 }

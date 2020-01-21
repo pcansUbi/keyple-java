@@ -1382,6 +1382,8 @@ public final class PoTransaction {
             PoBuilderParser poBuilderParser = commandIterator.next();
             poBuilderParser.setResponseParser((AbstractPoResponseParser) (poBuilderParser
                     .getCommandBuilder().createResponseParser(apduResponse)));
+            // update the CalypsoPo object with the date involved with this command
+            calypsoPo.updatePoData(poBuilderParser.getResponseParser().getPoData());
             if (!apduResponse.isSuccessful()) {
                 allSuccessfulCommands = false;
             }
@@ -1708,7 +1710,7 @@ public final class PoTransaction {
         /*
          * create and keep the PoBuilderParser, return the command index
          */
-        return poCommandsManager.addRegularCommand(new VerifyPinCmdBuild(calypsoPo.getPoClass(),
+        return poCommandsManager.addVerifyPinCommand(new VerifyPinCmdBuild(calypsoPo.getPoClass(),
                 PinTransmissionMode.PLAIN.equals(pinTransmissionMode) ? PinOperation.SEND_PLAIN_PIN
                         : PinOperation.SEND_ENCRYPTED_PIN,
                 pin));
@@ -1717,12 +1719,11 @@ public final class PoTransaction {
     /**
      * Get the PIN presentation attempt counter
      * 
-     * @param index the command index
      * @return the counter value
      */
-    public int getPinAttemptCounter(int index) {
-        VerifyPinRespPars verifyPinRespPars =
-                (VerifyPinRespPars) (poCommandsManager.getResponseParser(index));
+    public int getPinAttemptCounter() {
+        VerifyPinRespPars verifyPinRespPars = (VerifyPinRespPars) (poCommandsManager
+                .getResponseParser(poCommandsManager.getVerifyPinParserIndex()));
         return verifyPinRespPars.getRemainingAttemptCounter();
     }
 
