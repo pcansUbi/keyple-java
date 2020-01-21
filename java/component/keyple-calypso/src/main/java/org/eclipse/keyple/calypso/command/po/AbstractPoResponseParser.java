@@ -27,7 +27,7 @@ public abstract class AbstractPoResponseParser extends AbstractApduResponseParse
     }
 
     /**
-     * The method returns the data involve with the current comment.
+     * The method returns the data involved in the current command.
      * <p>
      * It must be overloaded by all commands that read or modify the PO's non-volatile memory.
      * 
