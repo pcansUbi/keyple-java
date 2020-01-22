@@ -12,9 +12,6 @@
 package org.eclipse.keyple.calypso.command.po.parser;
 
 import java.util.*;
-import org.eclipse.keyple.calypso.PoCounter;
-import org.eclipse.keyple.calypso.PoData;
-import org.eclipse.keyple.calypso.PoFile;
 import org.eclipse.keyple.calypso.command.po.AbstractPoResponseParser;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.eclipse.keyple.core.seproxy.message.ApduResponse;
@@ -55,8 +52,6 @@ public final class ReadRecordsRespPars extends AbstractPoResponseParser {
 
     /** Type of data to parse: record data or counter, single or multiple */
     private ReadDataStructure readDataStructure;
-    /** Short identifier of the file being read */
-    private byte sfi;
     /** Number of the first record read */
     private byte recordNumber;
 
@@ -64,14 +59,12 @@ public final class ReadRecordsRespPars extends AbstractPoResponseParser {
      * Instantiates a new ReadRecordsRespPars.
      * 
      * @param apduResponse the response from the PO
-     * @param readDataStructure the type of content in the response to parse
-     * @param sfi the short file identifier
      * @param recordNumber the record number
+     * @param readDataStructure the type of content in the response to parse
      */
     public ReadRecordsRespPars(ApduResponse apduResponse, ReadDataStructure readDataStructure,
-            byte sfi, byte recordNumber) {
+            byte recordNumber) {
         super(apduResponse);
-        this.sfi = sfi;
         this.recordNumber = recordNumber;
         this.readDataStructure = readDataStructure;
     }
@@ -216,20 +209,5 @@ public final class ReadRecordsRespPars extends AbstractPoResponseParser {
                 throw new IllegalStateException("Unexpected data structure");
         }
         return string;
-    }
-
-    @Override
-    public PoData getPoData() {
-        switch (readDataStructure) {
-            case SINGLE_RECORD_DATA:
-            case MULTIPLE_RECORD_DATA:
-                return new PoFile(sfi, getRecords(), "");
-            case SINGLE_COUNTER:
-            case MULTIPLE_COUNTER:
-                // TODO implement this
-                return new PoCounter();
-            default:
-                throw new IllegalStateException("Unexpected data structure");
-        }
     }
 }

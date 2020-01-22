@@ -12,8 +12,9 @@
 package org.eclipse.keyple.example.common.calypso.pc.transaction;
 
 
-import java.util.SortedMap;
+import org.eclipse.keyple.calypso.command.po.parser.AppendRecordRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.ReadDataStructure;
+import org.eclipse.keyple.calypso.command.po.parser.ReadRecordsRespPars;
 import org.eclipse.keyple.calypso.transaction.*;
 import org.eclipse.keyple.core.selection.*;
 import org.eclipse.keyple.core.seproxy.*;
@@ -122,13 +123,12 @@ public class CalypsoClassicTransactionEngine extends AbstractReaderObserverEngin
      * <p>
      * The PO logical channel is kept open or closed according to the closeSeChannel flag
      *
-     * @param calypsoPo the current CalypsoPo
      * @param poTransaction PoTransaction object
      * @param closeSeChannel flag to ask or not the channel closing at the end of the transaction
      * @throws KeypleReaderException reader exception (defined as public for purposes of javadoc)
      */
-    public void doCalypsoReadWriteTransaction(CalypsoPo calypsoPo, PoTransaction poTransaction,
-            boolean closeSeChannel) throws KeypleReaderException {
+    public void doCalypsoReadWriteTransaction(PoTransaction poTransaction, boolean closeSeChannel)
+            throws KeypleReaderException {
 
         boolean poProcessStatus;
 
@@ -137,15 +137,16 @@ public class CalypsoClassicTransactionEngine extends AbstractReaderObserverEngin
          */
 
         /* prepare Event Log read record */
-        poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_EventLog,
-                ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
-                String.format("EventLog (SFI=%02X, recnbr=%d))", CalypsoClassicInfo.SFI_EventLog,
-                        CalypsoClassicInfo.RECORD_NUMBER_1));
+        int readEventLogParserIndex = poTransaction.prepareReadRecordsCmd(
+                CalypsoClassicInfo.SFI_EventLog, ReadDataStructure.SINGLE_RECORD_DATA,
+                CalypsoClassicInfo.RECORD_NUMBER_1, String.format("EventLog (SFI=%02X, recnbr=%d))",
+                        CalypsoClassicInfo.SFI_EventLog, CalypsoClassicInfo.RECORD_NUMBER_1));
 
 
         /* prepare Contract List read record */
-        poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_ContractList,
-                ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
+        int readContractListParserIndex = poTransaction.prepareReadRecordsCmd(
+                CalypsoClassicInfo.SFI_ContractList, ReadDataStructure.SINGLE_RECORD_DATA,
+                CalypsoClassicInfo.RECORD_NUMBER_1,
                 String.format("ContractList (SFI=%02X))", CalypsoClassicInfo.SFI_ContractList));
 
         if (logger.isInfoEnabled()) {
@@ -161,13 +162,12 @@ public class CalypsoClassicTransactionEngine extends AbstractReaderObserverEngin
                 PoTransaction.SessionAccessLevel.SESSION_LVL_DEBIT,
                 CalypsoClassicInfo.SFI_EnvironmentAndHolder, CalypsoClassicInfo.RECORD_NUMBER_1);
 
-        logger.info("EventLog file: {}",
-                ByteArrayUtil.toHex(calypsoPo.getPoFile(CalypsoClassicInfo.SFI_EventLog)
-                        .getRecord(CalypsoClassicInfo.RECORD_NUMBER_1)));
+        logger.info("Parsing Read EventLog file: "
+                + ((ReadRecordsRespPars) poTransaction.getResponseParser(readEventLogParserIndex))
+                        .toString());
 
-        logger.info("ContractList file: {}",
-                ByteArrayUtil.toHex(calypsoPo.getPoFile(CalypsoClassicInfo.SFI_ContractList)
-                        .getRecord(CalypsoClassicInfo.RECORD_NUMBER_1)));
+        logger.info("Parsing Read ContractList file: " + ((ReadRecordsRespPars) poTransaction
+                .getResponseParser(readContractListParserIndex)).toString());
 
         if (!poTransaction.wasRatified()) {
             logger.info(
@@ -213,20 +213,17 @@ public class CalypsoClassicTransactionEngine extends AbstractReaderObserverEngin
 
             /* Read contract command (we assume we have determine Contract #1 to be read. */
             /* prepare Contract #1 read record */
-            poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_Contracts,
-                    ReadDataStructure.MULTIPLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
+            int readContractsParserIndex = poTransaction.prepareReadRecordsCmd(
+                    CalypsoClassicInfo.SFI_Contracts, ReadDataStructure.MULTIPLE_RECORD_DATA,
+                    CalypsoClassicInfo.RECORD_NUMBER_1,
                     String.format("Contracts (SFI=%02X, recnbr=%d)",
                             CalypsoClassicInfo.SFI_Contracts, CalypsoClassicInfo.RECORD_NUMBER_1));
 
             /* proceed with the sending of commands, don't close the channel */
             poProcessStatus = poTransaction.processPoCommandsInSession();
 
-            SortedMap<Integer, byte[]> records =
-                    calypsoPo.getPoFile(CalypsoClassicInfo.SFI_Contracts).getRecords();
-            for (SortedMap.Entry<Integer, byte[]> entry : records.entrySet()) {
-                logger.info("Contract [{}]: {}", entry.getKey(),
-                        ByteArrayUtil.toHex(entry.getValue()));
-            }
+            logger.info("Parsing Read Contract file: " + ((ReadRecordsRespPars) poTransaction
+                    .getResponseParser(readContractsParserIndex)).toString());
 
             if (logger.isInfoEnabled()) {
                 logger.info(
@@ -246,14 +243,18 @@ public class CalypsoClassicTransactionEngine extends AbstractReaderObserverEngin
              */
 
             /* prepare Event Log append record */
-            poTransaction.prepareAppendRecordCmd(CalypsoClassicInfo.SFI_EventLog,
-                    ByteArrayUtil.fromHex(CalypsoClassicInfo.eventLog_dataFill),
-                    String.format("EventLog (SFI=%02X)", CalypsoClassicInfo.SFI_EventLog));
+            int appendEventLogParserIndex =
+                    poTransaction.prepareAppendRecordCmd(CalypsoClassicInfo.SFI_EventLog,
+                            ByteArrayUtil.fromHex(CalypsoClassicInfo.eventLog_dataFill),
+                            String.format("EventLog (SFI=%02X)", CalypsoClassicInfo.SFI_EventLog));
 
             /*
              * A ratification command will be sent (CONTACTLESS_MODE).
              */
             poProcessStatus = poTransaction.processClosing(ChannelControl.CLOSE_AFTER);
+
+            logger.info("Parsing Append EventLog file: " + ((AppendRecordRespPars) poTransaction
+                    .getResponseParser(appendEventLogParserIndex)).toString());
         }
 
         if (poTransaction.isSuccessful()) {
@@ -351,7 +352,7 @@ public class CalypsoClassicTransactionEngine extends AbstractReaderObserverEngin
                 PoTransaction poTransaction = new PoTransaction(new PoResource(poReader, calypsoPo),
                         samResource, securitySettings);
 
-                doCalypsoReadWriteTransaction(calypsoPo, poTransaction, true);
+                doCalypsoReadWriteTransaction(poTransaction, true);
 
                 profiler.stop();
                 logger.warn(System.getProperty("line.separator") + "{}", profiler);

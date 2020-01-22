@@ -40,7 +40,6 @@ public final class PoSelectionRequest extends AbstractSeSelectionRequest {
     private int commandIndex;
     private List<Class<? extends AbstractApduResponseParser>> parsingClassList =
             new ArrayList<Class<? extends AbstractApduResponseParser>>();
-    private Map<Integer, Byte> readRecordSfi = new HashMap<Integer, Byte>();
     private Map<Integer, Byte> readRecordFirstRecordNumberMap = new HashMap<Integer, Byte>();
     private Map<Integer, ReadDataStructure> readRecordDataStructureMap =
             new HashMap<Integer, ReadDataStructure>();
@@ -105,7 +104,6 @@ public final class PoSelectionRequest extends AbstractSeSelectionRequest {
         }
 
         /* keep read record parameters in the dedicated Maps */
-        readRecordSfi.put(commandIndex, sfi);
         readRecordFirstRecordNumberMap.put(commandIndex, firstRecordNumber);
         readRecordDataStructureMap.put(commandIndex, readDataStructureEnum);
 
@@ -266,7 +264,7 @@ public final class PoSelectionRequest extends AbstractSeSelectionRequest {
         AbstractApduResponseParser parser;
         if (parsingClass == ReadRecordsRespPars.class) {
             parser = new ReadRecordsRespPars(seResponse.getApduResponses().get(commandIndex),
-                    readRecordDataStructureMap.get(commandIndex), readRecordSfi.get(commandIndex),
+                    readRecordDataStructureMap.get(commandIndex),
                     readRecordFirstRecordNumberMap.get(commandIndex));
         } else if (parsingClass == SelectFileRespPars.class) {
             parser = new SelectFileRespPars(seResponse.getApduResponses().get(commandIndex));
