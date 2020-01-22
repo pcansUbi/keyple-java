@@ -12,8 +12,24 @@
 package org.eclipse.keyple.calypso;
 
 public class PoPinStatus implements PoData {
+    private final boolean pinPresentationFailed;
+    private final int pinAttemptCounter;
+
+    public PoPinStatus(boolean pinPresentationFailed, int pinAttemptCounter) {
+        this.pinPresentationFailed = pinPresentationFailed;
+        this.pinAttemptCounter = pinAttemptCounter;
+    }
+
     @Override
     public Type getType() {
         return Type.PIN_STATUS;
+    }
+
+    public boolean isPinPresentationFailed() {
+        return pinPresentationFailed;
+    }
+
+    public int getPinAttemptCounter() {
+        return pinAttemptCounter;
     }
 }

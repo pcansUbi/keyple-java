@@ -133,9 +133,9 @@ public class StoredValueReload_Pcsc {
                     SvSettings.LogRead.SINGLE);
 
             if (poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
-                SvGetPoResponse svGetPoResponse = poTransaction.getSvGetPoResponse();
-                logger.info("SV balance = {}", svGetPoResponse.getBalance());
-                logger.info("Last reload amount = {}", svGetPoResponse.getLoadLog().getAmount());
+                logger.info("SV balance = {}", poTransaction.getCalypsoPo().getSvBalance());
+                logger.info("Last reload amount = {}",
+                        poTransaction.getCalypsoPo().getSvLoadLog().getAmount());
 
                 /*
                  * SV Debit step: reload 10 units (the returned index can be ignored as we are not

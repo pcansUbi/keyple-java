@@ -26,7 +26,6 @@ import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvUndebitCmdBui
 import org.eclipse.keyple.calypso.command.po.parser.*;
 import org.eclipse.keyple.calypso.command.po.parser.security.AbstractOpenSessionRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.security.CloseSessionRespPars;
-import org.eclipse.keyple.calypso.command.po.parser.security.VerifyPinRespPars;
 import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
 import org.eclipse.keyple.calypso.transaction.exception.*;
 import org.eclipse.keyple.core.command.AbstractApduCommandBuilder;
@@ -143,6 +142,15 @@ public final class PoTransaction {
     }
 
     /**
+     * Returns the {@link CalypsoPo} used for this {@link PoTransaction}
+     * 
+     * @return the {@link CalypsoPo} object
+     */
+    public CalypsoPo getCalypsoPo() {
+        return calypsoPo;
+    }
+
+    /**
      * Open a Secure Session.
      * <ul>
      * <li>The PO must have been previously selected, so a logical channel with the PO application
@@ -236,13 +244,13 @@ public final class PoTransaction {
                     poApduResponseList);
         }
 
-        for (ApduResponse apduR : poApduResponseList) {
-            if (!apduR.isSuccessful()) {
-                throw new KeypleCalypsoSecureSessionException("Invalid response",
-                        KeypleCalypsoSecureSessionException.Type.PO, poApduRequestList,
-                        poApduResponseList);
-            }
-        }
+        // for (ApduResponse apduR : poApduResponseList) {
+        // if (!apduR.isSuccessful()) {
+        // throw new KeypleCalypsoSecureSessionException("Invalid response",
+        // KeypleCalypsoSecureSessionException.Type.PO, poApduRequestList,
+        // poApduResponseList);
+        // }
+        // }
 
         /* Track Read Records for later use to build anticipated responses. */
         AnticipatedResponseBuilder.storeCommandResponse(poBuilderParsers, poApduRequestList,
@@ -386,13 +394,13 @@ public final class PoTransaction {
                     poApduResponseList);
         }
 
-        for (ApduResponse apduR : poApduResponseList) {
-            if (!apduR.isSuccessful()) {
-                throw new KeypleCalypsoSecureSessionException("Invalid response",
-                        KeypleCalypsoSecureSessionException.Type.PO, poApduRequestList,
-                        poApduResponseList);
-            }
-        }
+        // for (ApduResponse apduR : poApduResponseList) {
+        // if (!apduR.isSuccessful()) {
+        // throw new KeypleCalypsoSecureSessionException("Invalid response",
+        // KeypleCalypsoSecureSessionException.Type.PO, poApduRequestList,
+        // poApduResponseList);
+        // }
+        // }
 
         /* Track Read Records for later use to build anticipated responses. */
         AnticipatedResponseBuilder.storeCommandResponse(poBuilderParsers, poApduRequestList,
@@ -1716,16 +1724,16 @@ public final class PoTransaction {
                 pin));
     }
 
-    /**
-     * Get the PIN presentation attempt counter
-     * 
-     * @return the counter value
-     */
-    public int getPinAttemptCounter() {
-        VerifyPinRespPars verifyPinRespPars = (VerifyPinRespPars) (poCommandsManager
-                .getResponseParser(poCommandsManager.getVerifyPinParserIndex()));
-        return verifyPinRespPars.getRemainingAttemptCounter();
-    }
+    // /**
+    // * Get the PIN presentation attempt counter
+    // *
+    // * @return the counter value
+    // */
+    // public int getPinAttemptCounter() {
+    // VerifyPinRespPars verifyPinRespPars = (VerifyPinRespPars) (poCommandsManager
+    // .getResponseParser(poCommandsManager.getVerifyPinParserIndex()));
+    // return verifyPinRespPars.getRemainingAttemptCounter();
+    // }
 
     /**
      * Prepares an SV operation or simply retrieves the current SV status
@@ -1772,35 +1780,36 @@ public final class PoTransaction {
         }
     }
 
-    /**
-     * Getter for the SV Get output data.
-     * <p>
-     * Depending on the parameter {@link SvSettings.LogRead} used when calling prepareSvGet and also
-     * the type of PO, the output data of this command can come from the result of two seperate
-     * APDUs.
-     * <p>
-     * This method takes this into account and provides a SvGetPoResponse object built from one or
-     * two SvGetRespPars.
-     * 
-     * @return a SvGetPoResponse object
-     */
-    public SvGetPoResponse getSvGetPoResponse() {
-        if (svDoubleGet) {
-            /*
-             * 2 SV Get commands have been performed: we use the two last parsers from the SV Get
-             * parser index
-             */
-            return new SvGetPoResponse(
-                    (SvGetRespPars) (poCommandsManager.getResponseParser(
-                            poCommandsManager.getSvGetResponseParserIndex() - 1)),
-                    (SvGetRespPars) (poCommandsManager
-                            .getResponseParser(poCommandsManager.getSvGetResponseParserIndex())));
-        } else {
-            /* 1 SV Get command have been performed */
-            return new SvGetPoResponse((SvGetRespPars) (poCommandsManager
-                    .getResponseParser(poCommandsManager.getSvGetResponseParserIndex())));
-        }
-    }
+    // /**
+    // * Getter for the SV Get output data.
+    // * <p>
+    // * Depending on the parameter {@link SvSettings.LogRead} used when calling prepareSvGet and
+    // also
+    // * the type of PO, the output data of this command can come from the result of two seperate
+    // * APDUs.
+    // * <p>
+    // * This method takes this into account and provides a SvGetPoResponse object built from one or
+    // * two SvGetRespPars.
+    // *
+    // * @return a SvGetPoResponse object
+    // */
+    // public SvGetPoResponse getSvGetPoResponse() {
+    // if (svDoubleGet) {
+    // /*
+    // * 2 SV Get commands have been performed: we use the two last parsers from the SV Get
+    // * parser index
+    // */
+    // return new SvGetPoResponse(
+    // (SvGetRespPars) (poCommandsManager.getResponseParser(
+    // poCommandsManager.getSvGetResponseParserIndex() - 1)),
+    // (SvGetRespPars) (poCommandsManager
+    // .getResponseParser(poCommandsManager.getSvGetResponseParserIndex())));
+    // } else {
+    // /* 1 SV Get command have been performed */
+    // return new SvGetPoResponse((SvGetRespPars) (poCommandsManager
+    // .getResponseParser(poCommandsManager.getSvGetResponseParserIndex())));
+    // }
+    // }
 
     /**
      * Prepares an SV reload (increasing the current SV balance)

@@ -125,15 +125,13 @@ public class VerifyPin_Pcsc {
         if (selectPo()) {
             PoTransaction poTransaction = new PoTransaction(poResource, samResource,
                     CalypsoUtilities.getSecuritySettings());
-            int verifyPinIndex = 0;
-
             try {
                 /*
                  * SV Get step (the returned index can be ignored here since we have a dedicated
                  * method to get the output data)
                  */
-                byte[] pin = {(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x31};
-                verifyPinIndex = poTransaction.prepareVerifyPin(pin, PinTransmissionMode.PLAIN);
+                byte[] pin = {(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30};
+                poTransaction.prepareVerifyPin(pin, PinTransmissionMode.PLAIN);
 
                 logger.warn("Open session.");
                 if (poTransaction.processOpening(PoTransaction.ModificationMode.ATOMIC,
@@ -155,7 +153,7 @@ public class VerifyPin_Pcsc {
                 }
             } catch (KeypleReaderException ex) {
                 logger.error(
-                        "Attempt counter: " + poTransaction.getPinAttemptCounter(verifyPinIndex));
+                        "Attempt counter: " + poTransaction.getCalypsoPo().getPinAttemptCounter());
             }
         } else {
             logger.error("The PO selection failed");

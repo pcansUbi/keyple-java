@@ -17,9 +17,12 @@ import java.util.HashMap;
 import java.util.Map;
 import org.eclipse.keyple.calypso.PoData;
 import org.eclipse.keyple.calypso.PoFile;
+import org.eclipse.keyple.calypso.PoPinStatus;
+import org.eclipse.keyple.calypso.PoSvStatus;
 import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.PoRevision;
 import org.eclipse.keyple.calypso.command.po.parser.GetDataFciRespPars;
+import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
 import org.eclipse.keyple.core.selection.AbstractMatchingSe;
 import org.eclipse.keyple.core.seproxy.message.ApduResponse;
 import org.eclipse.keyple.core.seproxy.message.SeResponse;
@@ -71,6 +74,14 @@ public final class CalypsoPo extends AbstractMatchingSe {
     private boolean modificationCounterIsInBytes = true;
     private Map<Byte, PoFile> files = new HashMap<Byte, PoFile>();
     private static PoFile NOT_FOUND = new PoFile((byte) 0, (byte) 0, null, "Not found");
+    private boolean verifyPinDone = false;
+    private int pinAttemptCounter;
+    private boolean svGetDone = false;
+    private int svBalance;
+    private SvGetRespPars.LoadLog svLoadLog;
+    private SvGetRespPars.DebitLog svDebitLog;
+    private byte svCurrentKVC;
+    private int svTransactionNumber;
 
     /**
      * Constructor.
@@ -443,8 +454,21 @@ public final class CalypsoPo extends AbstractMatchingSe {
             case COUNTER:
                 break;
             case PIN_STATUS:
+                verifyPinDone = true;
+                pinAttemptCounter = ((PoPinStatus) poData).getPinAttemptCounter();
                 break;
             case SV_STATUS:
+                svGetDone = true;
+                PoSvStatus poSvStatus = (PoSvStatus) poData;
+                svBalance = poSvStatus.getBalance();
+                svCurrentKVC = poSvStatus.getCurrentKVC();
+                svTransactionNumber = poSvStatus.getTransactionNumber();
+                if (poSvStatus.getLoadLog() != null) {
+                    svLoadLog = poSvStatus.getLoadLog();
+                }
+                if (poSvStatus.getDebitLog() != null) {
+                    svDebitLog = poSvStatus.getDebitLog();
+                }
                 break;
         }
     }
@@ -461,5 +485,51 @@ public final class CalypsoPo extends AbstractMatchingSe {
             return NOT_FOUND;
         }
         return poFile;
+    }
+
+    public boolean isVerifyPinDone() {
+        return verifyPinDone;
+    }
+
+    public int getPinAttemptCounter() {
+        if (!verifyPinDone) {
+            throw new IllegalStateException("Verify pin command not executed.");
+        }
+        return pinAttemptCounter;
+    }
+
+    public int getSvBalance() {
+        if (!svGetDone) {
+            throw new IllegalStateException("SV Get command not executed.");
+        }
+        return svBalance;
+    }
+
+    public byte getSvCurrentKVC() {
+        if (!svGetDone) {
+            throw new IllegalStateException("SV Get command not executed.");
+        }
+        return svCurrentKVC;
+    }
+
+    public int getSvTransactionNumber() {
+        if (!svGetDone) {
+            throw new IllegalStateException("SV Get command not executed.");
+        }
+        return svTransactionNumber;
+    }
+
+    public SvGetRespPars.LoadLog getSvLoadLog() {
+        if (!svGetDone) {
+            throw new IllegalStateException("SV Get command not executed.");
+        }
+        return svLoadLog;
+    }
+
+    public SvGetRespPars.DebitLog getSvDebitLog() {
+        if (!svGetDone) {
+            throw new IllegalStateException("SV Get command not executed.");
+        }
+        return svDebitLog;
     }
 }

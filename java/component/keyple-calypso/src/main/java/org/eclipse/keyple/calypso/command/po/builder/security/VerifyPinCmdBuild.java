@@ -11,6 +11,8 @@
  ********************************************************************************/
 package org.eclipse.keyple.calypso.command.po.builder.security;
 
+import java.util.HashSet;
+import java.util.Set;
 import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.AbstractPoCommandBuilder;
 import org.eclipse.keyple.calypso.command.po.CalypsoPoCommands;
@@ -45,8 +47,15 @@ public class VerifyPinCmdBuild extends AbstractPoCommandBuilder<VerifyPinRespPar
         byte p1 = (byte) 0x00;
         byte p2 = (byte) 0x00;
 
-        this.request = setApduRequest(cla, command, p1, p2, pinData, null);
-        this.addSubName("Verify PIN " + pinOperation);
+        // we consider here that the first 2 incorrect presentations of the PIN code are successful
+        // commands: let's add the corresponding sw as successful codes
+        Set<Integer> additionalSuccessfulStatusCodes = new HashSet<Integer>();
+        additionalSuccessfulStatusCodes.add(0x63C2);
+        additionalSuccessfulStatusCodes.add(0x63C1);
+
+        this.request = setApduRequest(cla, command, p1, p2, pinData, null,
+                additionalSuccessfulStatusCodes);
+        this.addSubName(pinOperation.toString());
     }
 
     @Override

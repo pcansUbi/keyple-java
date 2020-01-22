@@ -138,12 +138,12 @@ public class StoredValueDebitInSession_Pcsc {
             logger.warn("Open session.");
             if (poTransaction.processOpening(PoTransaction.ModificationMode.ATOMIC,
                     PoTransaction.SessionAccessLevel.SESSION_LVL_DEBIT, (byte) 0, (byte) 0)) {
-                SvGetPoResponse svGetPoResponse = poTransaction.getSvGetPoResponse();
-                logger.warn("SV balance = {}", svGetPoResponse.getBalance());
-                logger.warn("Last debit amount = {}", svGetPoResponse.getDebitLog().getAmount());
+                logger.warn("SV balance = {}", poTransaction.getCalypsoPo().getSvBalance());
+                logger.warn("Last debit amount = {}",
+                        poTransaction.getCalypsoPo().getSvDebitLog().getAmount());
                 /* Display the SAM ID used for the last reload operation (from the reload log) */
-                logger.warn("Last SAM ID for reload = {}",
-                        ByteArrayUtil.toHex(svGetPoResponse.getLoadLog().getSamID()));
+                logger.warn("Last SAM ID for reload = {}", ByteArrayUtil
+                        .toHex(poTransaction.getCalypsoPo().getSvDebitLog().getSamID()));
 
                 /*
                  * SV Debit step: debit 10 units (the returned index can be ignored as we are not
@@ -156,7 +156,7 @@ public class StoredValueDebitInSession_Pcsc {
                     if (poTransaction.isSuccessful()) {
                         logger.warn("Debit operation in session successful.");
                     } else {
-                        logger.error("Debit operation failed: ", poTransaction.getLastError());
+                        logger.error("Debit operation failed: {}", poTransaction.getLastError());
                     }
                 }
             } else {

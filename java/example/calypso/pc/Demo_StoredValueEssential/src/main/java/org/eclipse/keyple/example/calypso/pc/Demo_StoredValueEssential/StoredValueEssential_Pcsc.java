@@ -14,7 +14,6 @@ package org.eclipse.keyple.example.calypso.pc.Demo_StoredValueEssential;
 
 import java.util.Scanner;
 import org.eclipse.keyple.calypso.command.po.parser.ReadDataStructure;
-import org.eclipse.keyple.calypso.command.po.parser.storedvalue.SvGetRespPars;
 import org.eclipse.keyple.calypso.transaction.*;
 import org.eclipse.keyple.core.selection.MatchingSelection;
 import org.eclipse.keyple.core.selection.SeSelection;
@@ -108,13 +107,11 @@ public class StoredValueEssential_Pcsc {
      * @return true if the operation succeeded
      */
     private static boolean svView() throws KeypleReaderException {
-        int svGetIndexDebit =
-                poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO);
+        poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO,
+                SvSettings.LogRead.SINGLE);
 
         if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
-            SvGetRespPars svGetRespPars =
-                    ((SvGetRespPars) poTransaction.getResponseParser(svGetIndexDebit));
-            logger.warn("| SV balance = {}", svGetRespPars.getBalance());
+            logger.warn("| SV balance = {}", poTransaction.getCalypsoPo().getSvBalance());
             return true;
         }
         logger.error("Getting the SV balance failed.");
@@ -129,25 +126,24 @@ public class StoredValueEssential_Pcsc {
      * @throws KeypleReaderException
      */
     private static boolean svReload(int amount) throws KeypleReaderException {
-        int svGetIndex =
-                poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, SvSettings.Action.DO);
+        poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, SvSettings.Action.DO,
+                SvSettings.LogRead.SINGLE);
 
         if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
             return false;
         } else {
-            SvGetRespPars svGetRespPars =
-                    ((SvGetRespPars) poTransaction.getResponseParser(svGetIndex));
-            logger.warn("SV balance = {}", svGetRespPars.getBalance());
-            logger.warn("Last reload amount = {}", svGetRespPars.getLoadLog().getAmount());
+            logger.warn("SV balance = {}", poTransaction.getCalypsoPo().getSvBalance());
+            logger.warn("Last reload amount = {}",
+                    poTransaction.getCalypsoPo().getSvLoadLog().getAmount());
         }
 
-        int svReloadIndex = poTransaction.prepareSvReload(amount);
+        poTransaction.prepareSvReload(amount);
 
         if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
             if (poTransaction.isSuccessful()) {
                 logger.warn("Reload operation successful.");
             } else {
-                logger.error("Reload operation failed: ", poTransaction.getLastError());
+                logger.error("Reload operation failed: {}", poTransaction.getLastError());
             }
             return true;
         }
@@ -163,27 +159,27 @@ public class StoredValueEssential_Pcsc {
      * @throws KeypleReaderException
      */
     private static boolean svReloadInSession(int amount) throws KeypleReaderException {
-        int readRecordIndex =
-                poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_EnvironmentAndHolder,
-                        ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
-                        29, String.format("EnvironmentAndHolder (SFI=%02X))",
-                                CalypsoClassicInfo.SFI_EnvironmentAndHolder));
+        poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_EnvironmentAndHolder,
+                ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1, 29,
+                String.format("EnvironmentAndHolder (SFI=%02X))",
+                        CalypsoClassicInfo.SFI_EnvironmentAndHolder));
 
-        int svGetIndex =
-                poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, SvSettings.Action.DO);
+        poTransaction.prepareSvGet(SvSettings.Operation.RELOAD, SvSettings.Action.DO,
+                SvSettings.LogRead.SINGLE);
 
         logger.warn("Open session.");
         if (!poTransaction.processOpening(PoTransaction.ModificationMode.ATOMIC,
                 PoTransaction.SessionAccessLevel.SESSION_LVL_LOAD, (byte) 0, (byte) 0)) {
             return false;
         } else {
-            SvGetRespPars svGetRespPars =
-                    ((SvGetRespPars) poTransaction.getResponseParser(svGetIndex));
-            logger.warn("SV balance = {}", svGetRespPars.getBalance());
-            logger.warn("Last reload amount = {}", svGetRespPars.getLoadLog().getAmount());
+            logger.warn("Environment and Holder = {}", poTransaction.getCalypsoPo()
+                    .getPoFile(CalypsoClassicInfo.SFI_EnvironmentAndHolder));
+            logger.warn("SV balance = {}", poTransaction.getCalypsoPo().getSvBalance());
+            logger.warn("Last reload amount = {}",
+                    poTransaction.getCalypsoPo().getSvLoadLog().getAmount());
         }
 
-        int svReloadIndex = poTransaction.prepareSvReload(amount);
+        poTransaction.prepareSvReload(amount);
 
         logger.warn("Close session.");
         if (poTransaction.processClosing(ChannelControl.CLOSE_AFTER)) {
@@ -206,19 +202,18 @@ public class StoredValueEssential_Pcsc {
      * @throws KeypleReaderException
      */
     private static boolean svDebit(int amount) throws KeypleReaderException {
-        int svGetIndex =
-                poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO);
+        poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO,
+                SvSettings.LogRead.SINGLE);
 
         if (!poTransaction.processPoCommands(ChannelControl.KEEP_OPEN)) {
             return false;
         } else {
-            SvGetRespPars svGetRespPars =
-                    ((SvGetRespPars) poTransaction.getResponseParser(svGetIndex));
-            logger.warn("SV balance = {}", svGetRespPars.getBalance());
-            logger.warn("Last debit amount = {}", svGetRespPars.getDebitLog().getAmount());
+            logger.warn("SV balance = {}", poTransaction.getCalypsoPo().getSvBalance());
+            logger.warn("Last debit amount = {}",
+                    poTransaction.getCalypsoPo().getSvDebitLog().getAmount());
         }
 
-        int svDebitIndex = poTransaction.prepareSvDebit(amount);
+        poTransaction.prepareSvDebit(amount);
 
         if (poTransaction.processPoCommands(ChannelControl.CLOSE_AFTER)) {
             if (poTransaction.isSuccessful()) {
@@ -246,21 +241,20 @@ public class StoredValueEssential_Pcsc {
                         29, String.format("EnvironmentAndHolder (SFI=%02X))",
                                 CalypsoClassicInfo.SFI_EnvironmentAndHolder));
 
-        int svGetIndex =
-                poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO);
+        poTransaction.prepareSvGet(SvSettings.Operation.DEBIT, SvSettings.Action.DO,
+                SvSettings.LogRead.SINGLE);
 
         logger.warn("Open session.");
         if (!poTransaction.processOpening(PoTransaction.ModificationMode.ATOMIC,
                 PoTransaction.SessionAccessLevel.SESSION_LVL_DEBIT, (byte) 0, (byte) 0)) {
             return false;
         } else {
-            SvGetRespPars svGetRespPars =
-                    ((SvGetRespPars) poTransaction.getResponseParser(svGetIndex));
-            logger.warn("SV balance = {}", svGetRespPars.getBalance());
-            logger.warn("Last debit amount = {}", svGetRespPars.getDebitLog().getAmount());
+            logger.warn("SV balance = {}", poTransaction.getCalypsoPo().getSvBalance());
+            logger.warn("Last debit amount = {}",
+                    poTransaction.getCalypsoPo().getSvDebitLog().getAmount());
         }
 
-        int svReloadIndex = poTransaction.prepareSvDebit(amount);
+        poTransaction.prepareSvDebit(amount);
 
         logger.warn("Close session.");
         if (poTransaction.processClosing(ChannelControl.CLOSE_AFTER)) {
@@ -388,14 +382,6 @@ public class StoredValueEssential_Pcsc {
                     default:
                         break;
                 }
-                // logger.info("Please remove the card.");
-                // while (poReader.isSePresent()) {
-                // try {
-                // Thread.sleep(200);
-                // } catch (InterruptedException e) {
-                // e.printStackTrace();
-                // }
-                // }
             }
         }
     }

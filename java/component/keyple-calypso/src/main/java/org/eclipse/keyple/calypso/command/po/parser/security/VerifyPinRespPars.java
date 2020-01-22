@@ -13,6 +13,8 @@ package org.eclipse.keyple.calypso.command.po.parser.security;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.eclipse.keyple.calypso.PoData;
+import org.eclipse.keyple.calypso.PoPinStatus;
 import org.eclipse.keyple.calypso.command.po.AbstractPoResponseParser;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.eclipse.keyple.core.seproxy.message.ApduResponse;
@@ -23,8 +25,8 @@ public class VerifyPinRespPars extends AbstractPoResponseParser {
     static {
         Map<Integer, StatusProperties> m =
                 new HashMap<Integer, StatusProperties>(AbstractApduResponseParser.STATUS_TABLE);
-        m.put(0x63C1, new StatusProperties(false, "Incorrect PIN (1 attempt remaining)."));
-        m.put(0x63C2, new StatusProperties(false, "Incorrect PIN (2 attempt remaining)."));
+        m.put(0x63C1, new StatusProperties(true, "Incorrect PIN (1 attempt remaining)."));
+        m.put(0x63C2, new StatusProperties(true, "Incorrect PIN (2 attempt remaining)."));
         m.put(0x6700, new StatusProperties(false,
                 "Lc value not supported (only 00h, 04h or 08h are supported)."));
         m.put(0x6900, new StatusProperties(false, "Transaction Counter is 0."));
@@ -37,13 +39,16 @@ public class VerifyPinRespPars extends AbstractPoResponseParser {
         STATUS_TABLE = m;
     }
 
+    private final boolean checkOnly;
+
     /**
      * Instantiates a new VerifyPinRespPars
      *
      * @param response the response from the PO
      */
-    public VerifyPinRespPars(ApduResponse response) {
+    public VerifyPinRespPars(ApduResponse response, boolean checkOnly) {
         super(response);
+        this.checkOnly = checkOnly;
     }
 
     /**
@@ -71,6 +76,18 @@ public class VerifyPinRespPars extends AbstractPoResponseParser {
                         + String.format("0x%04X", response.getStatusCode()));
         }
         return attemptCounter;
+    }
+
+    @Override
+    public PoData getPoData() {
+        int attemptCounter = getRemainingAttemptCounter();
+        boolean pinPresentationFailed;
+        if (!checkOnly && attemptCounter != 3) {
+            pinPresentationFailed = true;
+        } else {
+            pinPresentationFailed = false;
+        }
+        return new PoPinStatus(pinPresentationFailed, attemptCounter);
     }
 
     @Override
