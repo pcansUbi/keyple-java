@@ -128,16 +128,14 @@ public class VerifyPin_Pcsc {
             int verifyPinIndex = 0;
 
             try {
-                /*
-                 * SV Get step (the returned index can be ignored here since we have a dedicated
-                 * method to get the output data)
-                 */
-                byte[] pin = {(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x31};
-                verifyPinIndex = poTransaction.prepareVerifyPin(pin, PinTransmissionMode.PLAIN);
-
                 logger.warn("Open session.");
                 if (poTransaction.processOpening(PoTransaction.ModificationMode.ATOMIC,
                         PoTransaction.SessionAccessLevel.SESSION_LVL_DEBIT, (byte) 0, (byte) 0)) {
+
+                    byte[] pin = {(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30};
+                    verifyPinIndex = poTransaction.prepareVerifyPinPlain(pin);
+
+                    poTransaction.processPoCommandsInSession();
 
                     logger.warn("Close session.");
                     if (poTransaction.processClosing(ChannelControl.CLOSE_AFTER)) {

@@ -11,12 +11,14 @@
  ********************************************************************************/
 package org.eclipse.keyple.calypso.transaction;
 
+import static org.eclipse.keyple.calypso.command.po.PoBuilderParser.SplitCommand.VERIFY_PIN;
 import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.keyple.calypso.command.po.AbstractPoCommandBuilder;
 import org.eclipse.keyple.calypso.command.po.AbstractPoResponseParser;
 import org.eclipse.keyple.calypso.command.po.PoBuilderParser;
 import org.eclipse.keyple.calypso.command.po.PoSvCommand;
+import org.eclipse.keyple.calypso.command.po.builder.security.PoGetChallengeCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvGetCmdBuild;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.slf4j.Logger;
@@ -104,6 +106,45 @@ class PoCommandsManager {
         return (preparedCommandIndex - 1);
     }
 
+    /**
+     * Add a Verify Pin encrypted command to the builders and parsers list.
+     * <p>
+     * Handle the clearing of the list if needed.
+     * <p>
+     * Two commands will result: Get Challenge and Verify Pin. Verify Pin is not build here since we
+     * need data from the SAM to build it. Get Challenge is inserted with the VERIFY_PIN split
+     * attribute to handle the case later.
+     *
+     * @param calypsoPo the calypsoPo to handle the building of the Get Challenge command
+     * @param pin a 4-byte byte array containing the PIN value
+     * @return the index to retrieve the parser later
+     */
+    int addVerifyPinEncryptedCommand(CalypsoPo calypsoPo, byte[] pin) {
+        /**
+         * Reset the list if when preparing the first command after the last processing.
+         * <p>
+         * However, the parsers have remained available until now.
+         */
+        updateBuilderParserList();
+
+        /*
+         * insert Get Challenge into the command list, mark it as a split command, the next command
+         * is VERIFY_PIN
+         */
+        poBuilderParserList.add(new PoBuilderParser(
+                new PoGetChallengeCmdBuild(calypsoPo.getPoClass()), VERIFY_PIN));
+        /*
+         * insert an empty command in the list of commands that will later be replaced by the real
+         * "verify pin" command
+         */
+        poBuilderParserList.add(new PoBuilderParser(null));
+
+        /* return and post-increment index */
+        preparedCommandIndex += 2;
+        /* not an SV Get command */
+        lastCommandIsSvGet = false;
+        return (preparedCommandIndex - 1);
+    }
 
     /**
      * Add a StoredValue command to the builders and parsers list.

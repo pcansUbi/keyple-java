@@ -17,22 +17,22 @@ import org.eclipse.keyple.calypso.command.sam.CalypsoSamCommands;
 import org.eclipse.keyple.calypso.command.sam.SamRevision;
 
 /**
- * Builder for the SAM Give Random APDU command.
+ * Builder for the SAM Card Generate Key APDU command.
  */
 public class CardGenerateKeyCmdBuild extends AbstractSamCommandBuilder {
     /** The command reference. */
     private static final CalypsoSamCommands command = CalypsoSamCommands.CARD_GENERATE_KEY;
 
     /**
-     * Instantiates a new DigestUpdateCmdBuild and generate the ciphered data for a key ciphered by
-     * another.
+     * Instantiates a new CardGenerateKeyCmdBuild and generate the ciphered data for a key ciphered
+     * by another.
      *
      * <p>
      * If the provided ciphering key reference is null, the source key is ciphered with the null
      * key.
      * 
      * @param revision of the SAM
-     * @param cipheringKey the key used to ciphering the source key (the null key is used if this
+     * @param cipheringKey the key used to encipher the source key (the null key is used if this
      *        reference is null)
      * @param sourceKey the reference of the key to be loaded
      */

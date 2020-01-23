@@ -12,7 +12,6 @@
 package org.eclipse.keyple.calypso.transaction;
 
 import java.util.*;
-import org.eclipse.keyple.calypso.command.CalypsoBuilderParser;
 import org.eclipse.keyple.calypso.command.po.*;
 import org.eclipse.keyple.calypso.command.po.builder.*;
 import org.eclipse.keyple.calypso.command.po.builder.security.AbstractOpenSessionCmdBuild;
@@ -201,7 +200,7 @@ public final class PoTransaction {
 
         /* Add all optional PoSendableInSession commands to the PO ApduRequest list */
         if (poBuilderParsers != null) {
-            poApduRequestList.addAll(this.getApduRequestsToSendInSession(poBuilderParsers));
+            buildApduRequestsList(poBuilderParsers, poApduRequestList);
         }
 
         /* Create a SeRequest from the ApduRequest list, PO AID as Selector, keep channel open */
@@ -310,20 +309,26 @@ public final class PoTransaction {
     }
 
     /**
-     * Change SendableInSession List to ApduRequest List . TODO rename parameter (SAM)
+     * Build an ApduRequest List from command list (PoBuilderParser).
+     * <p>
+     * If a 'split' command is present, the process stops are the method return true.
      * 
-     * @param poOrSamCommandsInsideSession a po or sam commands list to be sent in session
-     * @return the ApduRequest list
+     * @param poBuilderParsers a po commands list to be sent in session
+     * @param apduRequestList the list of the next Apdu requests to send to the PO
+     * @return true if the initial list has been split (there are still Apdu to send)
      */
-    private List<ApduRequest> getApduRequestsToSendInSession(
-            List<? extends CalypsoBuilderParser> poOrSamCommandsInsideSession) {
-        List<ApduRequest> apduRequestList = new ArrayList<ApduRequest>();
-        if (poOrSamCommandsInsideSession != null) {
-            for (CalypsoBuilderParser cmd : poOrSamCommandsInsideSession) {
-                apduRequestList.add(cmd.getCommandBuilder().getApduRequest());
+    private boolean buildApduRequestsList(List<PoBuilderParser> poBuilderParsers,
+            List<ApduRequest> apduRequestList) {
+        for (PoBuilderParser poBuilderParser : poBuilderParsers) {
+            if (!poBuilderParser.isSent()) {
+                apduRequestList.add(poBuilderParser.getCommandBuilder().getApduRequest());
+                poBuilderParser.setSent();
+                if (poBuilderParser.isSplitCommand()) {
+                    return true;
+                }
             }
         }
-        return apduRequestList;
+        return false;
     }
 
     /**
@@ -349,7 +354,8 @@ public final class PoTransaction {
             ChannelControl channelControl) throws KeypleReaderException {
 
         // Get PO ApduRequest List from PoSendableInSession List
-        List<ApduRequest> poApduRequestList = this.getApduRequestsToSendInSession(poBuilderParsers);
+        List<ApduRequest> poApduRequestList = new ArrayList<ApduRequest>();
+        this.buildApduRequestsList(poBuilderParsers, poApduRequestList);
 
         /*
          * Create a SeRequest from the ApduRequest list, PO AID as Selector, manage the logical
@@ -479,8 +485,8 @@ public final class PoTransaction {
         }
 
         /* Get PO ApduRequest List from PoSendableInSession List - for the first PO exchange */
-        List<ApduRequest> poApduRequestList =
-                this.getApduRequestsToSendInSession(poModificationCommands);
+        List<ApduRequest> poApduRequestList = new ArrayList<ApduRequest>();
+        this.buildApduRequestsList(poModificationCommands, poApduRequestList);
 
         /* Compute "anticipated" Digest Update (for optional poModificationCommands) */
         if ((poModificationCommands != null) && !poApduRequestList.isEmpty()) {
@@ -1698,20 +1704,53 @@ public final class PoTransaction {
      * Builds a Verify PIN command and add it to the list of commands to be sent with the next
      * process command
      * <p>
+     * The PIN code is transmitted in plain text.
+     * <p>
      * Returns the associated response parser index.
      *
      * @param pin byte array containing the PIN digits
-     * @param pinTransmissionMode plain or encrypted
      * @return the command index (input order, starting at 0)
+     * @throws NotSupportedException if the PIN feature is not available for the current PO
      */
-    public int prepareVerifyPin(byte[] pin, PinTransmissionMode pinTransmissionMode) {
+    public int prepareVerifyPinPlain(byte[] pin) throws NotSupportedException {
+        if (!calypsoPo.hasCalypsoPin()) {
+            throw new NotSupportedException(
+                    "The PIN code functionality is not supported by this PO");
+        }
+        if (pin == null || pin.length != 4) {
+            throw new IllegalArgumentException("Bad PIN argument");
+        }
         /*
          * create and keep the PoBuilderParser, return the command index
          */
-        return poCommandsManager.addRegularCommand(new VerifyPinCmdBuild(calypsoPo.getPoClass(),
-                PinTransmissionMode.PLAIN.equals(pinTransmissionMode) ? PinOperation.SEND_PLAIN_PIN
-                        : PinOperation.SEND_ENCRYPTED_PIN,
-                pin));
+        return poCommandsManager.addRegularCommand(
+                new VerifyPinCmdBuild(calypsoPo.getPoClass(), PinOperation.SEND_PLAIN_PIN, pin));
+    }
+
+    /**
+     * Builds a Verify PIN command and add it to the list of commands to be sent with the next
+     * process command
+     * <p>
+     * The PIN code transmission is encrypted.
+     * <p>
+     * Returns the associated response parser index.
+     *
+     * @param pin byte array containing the PIN digits
+     * @return the command index (input order, starting at 0)
+     * @throws NotSupportedException if the PIN feature is not available for the current PO
+     */
+    public int prepareVerifyPinEncrypted(byte[] pin) throws NotSupportedException {
+        if (!calypsoPo.hasCalypsoPin()) {
+            throw new NotSupportedException(
+                    "The PIN code functionality is not supported by this PO");
+        }
+        if (pin == null || pin.length != 4) {
+            throw new IllegalArgumentException("Bad PIN argument");
+        }
+        /*
+         * add the verify pin encrypted request to the command list managed by the PoCommandsManager
+         */
+        return poCommandsManager.addVerifyPinEncryptedCommand(calypsoPo, pin);
     }
 
     /**
@@ -1735,9 +1774,14 @@ public final class PoTransaction {
      * @param logRead specifies whether both log files (reload and debit) are required or whether
      *        only the log file corresponding to the current operation is requested.
      * @return the command index
+     * @throws NotSupportedException if the Stored Value is not available for the current PO
      */
     public int prepareSvGet(SvSettings.Operation svOperation, SvSettings.Action svAction,
-            SvSettings.LogRead logRead) {
+            SvSettings.LogRead logRead) throws NotSupportedException {
+        if (!calypsoPo.hasCalypsoStoredValue()) {
+            throw new NotSupportedException(
+                    "The Stored Value functionality is not supported by this PO.");
+        }
         if (SvSettings.LogRead.ALL.equals(logRead) && !calypsoPo.isRev3_2ModeAvailable()) {
             /**
              * @see Calypso Layer ID 8.09/8.10 (200108): both reload and debit logs are requested

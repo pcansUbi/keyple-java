@@ -9,11 +9,17 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  ********************************************************************************/
-package org.eclipse.keyple.calypso.transaction;
+package org.eclipse.keyple.calypso.transaction.exception;
 
-public enum PinTransmissionMode {
-    /** The PIN code is transmitted in clear text */
-    PLAIN,
-    /** The PIN code is transmitted in encrypted form */
-    ENCRYPTED
+import org.eclipse.keyple.core.seproxy.exception.KeypleBaseException;
+
+public class NotSupportedException extends KeypleBaseException {
+
+    public NotSupportedException(String message) {
+        super(message);
+    }
+
+    public NotSupportedException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

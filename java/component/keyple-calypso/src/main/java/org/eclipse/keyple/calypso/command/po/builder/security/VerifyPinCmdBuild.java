@@ -46,7 +46,7 @@ public class VerifyPinCmdBuild extends AbstractPoCommandBuilder<VerifyPinRespPar
         byte p2 = (byte) 0x00;
 
         this.request = setApduRequest(cla, command, p1, p2, pinData, null);
-        this.addSubName("Verify PIN " + pinOperation);
+        this.addSubName(pinOperation.toString());
     }
 
     @Override

@@ -22,9 +22,26 @@ public class PoBuilderParser
         implements CalypsoBuilderParser<AbstractPoCommandBuilder, AbstractPoResponseParser> {
     private final AbstractPoCommandBuilder poCommandBuilder;
     private AbstractPoResponseParser poResponseParser;
+    private boolean isSent;
+    private final boolean isSplitCommand;
+    private final SplitCommand splitCommand;
+
+    public enum SplitCommand {
+        NOT_SET, GET_CHALLENGE, VERIFY_PIN
+    };
 
     public PoBuilderParser(AbstractPoCommandBuilder poCommandBuilder) {
         this.poCommandBuilder = poCommandBuilder;
+        isSent = false;
+        isSplitCommand = false;
+        this.splitCommand = SplitCommand.NOT_SET;
+    }
+
+    public PoBuilderParser(AbstractPoCommandBuilder poCommandBuilder, SplitCommand splitCommand) {
+        this.poCommandBuilder = poCommandBuilder;
+        isSent = false;
+        isSplitCommand = true;
+        this.splitCommand = splitCommand;
     }
 
     public AbstractPoCommandBuilder getCommandBuilder() {
@@ -35,7 +52,23 @@ public class PoBuilderParser
         return poResponseParser;
     }
 
+    public boolean isSent() {
+        return isSent;
+    }
+
+    public void setSent() {
+        isSent = true;
+    }
+
     public void setResponseParser(AbstractPoResponseParser poResponseParser) {
         this.poResponseParser = poResponseParser;
+    }
+
+    public boolean isSplitCommand() {
+        return isSplitCommand;
+    }
+
+    public SplitCommand getSplitCommand() {
+        return splitCommand;
     }
 }

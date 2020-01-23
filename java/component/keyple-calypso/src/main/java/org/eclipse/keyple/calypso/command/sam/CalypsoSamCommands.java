@@ -39,8 +39,11 @@ public enum CalypsoSamCommands implements CommandsTable {
     /** The sam digest authenticate. */
     GIVE_RANDOM("Give Random", (byte) 0x86),
 
-    /** The sam digest authenticate. */
+    /** The sam card generate key. */
     CARD_GENERATE_KEY("Card Generate Key", (byte) 0x12),
+
+    /** The sam card cipher PIN. */
+    CARD_CIPHER_PIN("Card Cipher PIN", (byte) 0x12),
 
     /** The sam unlock. */
     UNLOCK("Unlock", (byte) 0x20),

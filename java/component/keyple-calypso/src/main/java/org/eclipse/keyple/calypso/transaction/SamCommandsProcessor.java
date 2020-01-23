@@ -14,6 +14,7 @@ package org.eclipse.keyple.calypso.transaction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.eclipse.keyple.calypso.KeyReference;
 import org.eclipse.keyple.calypso.command.po.PoRevision;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvDebitCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvReloadCmdBuild;
@@ -665,5 +666,66 @@ class SamCommandsProcessor {
         }
 
         return svCheckResponse.isSuccessful();
+    }
+
+    /**
+     *
+     * @param poChallenge
+     * @param currentPin
+     * @param newPin
+     * @return
+     * @throws KeypleReaderException
+     */
+    byte[] getCipheredPinData(byte[] poChallenge, byte[] currentPin, byte[] newPin)
+            throws KeypleReaderException {
+
+        List<ApduRequest> samApduRequestList = new ArrayList<ApduRequest>();
+        if (!isDiversificationDone) {
+            /* Build the SAM Select Diversifier command to provide the SAM with the PO S/N */
+            AbstractApduCommandBuilder selectDiversifier =
+                    new SelectDiversifierCmdBuild(samResource.getMatchingSe().getSamRevision(),
+                            poResource.getMatchingSe().getApplicationSerialNumber());
+            samApduRequestList.add(selectDiversifier.getApduRequest());
+            isDiversificationDone = true;
+        }
+
+        if (isDigesterInitialized) {
+            /* Get the pending SAM ApduRequest and add it to the current ApduRequest list */
+            samApduRequestList.addAll(getPendingSamRequests(false).getApduRequests());
+        }
+
+        AbstractApduCommandBuilder giveRandimCmdBuilder =
+                new GiveRandomCmdBuild(samResource.getMatchingSe().getSamRevision(), poChallenge);
+
+        samApduRequestList.add(giveRandimCmdBuilder.getApduRequest());
+
+        AbstractApduCommandBuilder cardCipherPinCmdBuilder =
+                new CardCipherPinCmdBuild(samResource.getMatchingSe().getSamRevision(),
+                        new KeyReference(workKeyKif, workKeyKVC), currentPin, newPin);
+
+        int cardCipherPinCmdIndex = samApduRequestList.size();
+
+        samApduRequestList.add(cardCipherPinCmdBuilder.getApduRequest());
+
+        // build a SAM SeRequest
+        SeRequest samSeRequest = new SeRequest(samApduRequestList);
+
+        // execute the command
+        SeResponse samSeResponse = samReader.transmit(samSeRequest);
+
+        ApduResponse cardCipherPinResponse =
+                samSeResponse.getApduResponses().get(cardCipherPinCmdIndex);
+
+        if (!cardCipherPinResponse.isSuccessful()) {
+            throw new KeypleCalypsoSvSecurityException(
+                    "SAM command card cipher PIN failed with status word "
+                            + ByteArrayUtil.toHex(cardCipherPinResponse.getBytes()));
+        }
+
+        // create a parser
+        CardCipherPinRespPars cardCipherPinRespPars =
+                new CardCipherPinRespPars(cardCipherPinResponse);
+
+        return cardCipherPinRespPars.getCipheredData();
     }
 }
