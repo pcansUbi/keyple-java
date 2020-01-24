@@ -354,7 +354,6 @@ public final class PoTransaction {
             }
         }
 
-
         sessionState = SessionState.SESSION_OPEN;
 
         return new SeResponse(true, true, poSeResponse.getSelectionStatus(), poApduResponseList);
@@ -416,7 +415,7 @@ public final class PoTransaction {
 
         // Get PO ApduRequest List from PoSendableInSession List
         List<ApduRequest> poApduRequestList = new ArrayList<ApduRequest>();
-        this.buildApduRequests(poBuilderParsers, poApduRequestList);
+        int splitCommandIndex = buildApduRequests(poBuilderParsers, poApduRequestList);
 
         /*
          * Create a SeRequest from the ApduRequest list, PO AID as Selector, manage the logical
@@ -453,14 +452,6 @@ public final class PoTransaction {
                     poApduResponseList);
         }
 
-        // for (ApduResponse apduR : poApduResponseList) {
-        // if (!apduR.isSuccessful()) {
-        // throw new KeypleCalypsoSecureSessionException("Invalid response",
-        // KeypleCalypsoSecureSessionException.Type.PO, poApduRequestList,
-        // poApduResponseList);
-        // }
-        // }
-
         /* Track Read Records for later use to build anticipated responses. */
         AnticipatedResponseBuilder.storeCommandResponse(poBuilderParsers, poApduRequestList,
                 poApduResponseList, 0, poBuilderParsers.size() - 1);
@@ -478,7 +469,65 @@ public final class PoTransaction {
                         poApduResponseList.get(i));
             }
         }
-        return poSeResponse;
+
+        /* Specific processing if the request has been split */
+        while (splitCommandIndex >= 0) {
+            /* Execute a loop, since the request can be split several times. */
+            /* Determine the command that made the request split */
+            PoBuilderParser.SplitCommandInfo splitCommandInfo =
+                    poBuilderParsers.get(splitCommandIndex).getSplitCommandInfo();
+            switch (splitCommandInfo) {
+                case VERIFY_PIN:
+                    logger.debug("VERIFY PIN split  found!");
+                    /*
+                     * we expect here that the last received response is the answer to a Get
+                     * Challenge command
+                     */
+                    byte[] poChallenge =
+                            poApduResponseList.get(poApduResponseList.size() - 1).getDataOut();
+                    /* Remove this PoTransaction internal response from the received list */
+                    poApduResponseList.remove(poApduResponseList.size() - 1);
+                    /* Retrieve the Verify Pin partially built command */
+                    VerifyPinCmdBuild verifyPinCmdBuild = (VerifyPinCmdBuild) poBuilderParsers
+                            .get(splitCommandIndex + 1).getCommandBuilder();
+                    /* Get the encrypted PIN with the help of the SAM */
+                    byte[] pinCipheredData = samCommandsProcessor.getCipheredPinData(poChallenge,
+                            verifyPinCmdBuild.getPin(), null);
+                    /* Complete the Verify Pin command builder */
+                    verifyPinCmdBuild.setCipheredPinData(pinCipheredData);
+                    /* Remove the Get Challenge command from the builder list (internal command) */
+                    poBuilderParsers.remove(splitCommandIndex);
+                    /* Clear the request list to prepare the following transmission */
+                    poApduRequestList.clear();
+                    /* Get the next ApduRequest list and keep the possible split index */
+                    int newSplitCommandIndex =
+                            buildApduRequests(poBuilderParsers, poApduRequestList);
+                    /* Create a SeRequest from the ApduRequest list */
+                    poSeRequest = new SeRequest(poApduRequestList);
+                    /* Transmit the commands to the PO and get the responses */
+                    SeResponse poSeResponseVP = poReader.transmit(poSeRequest);
+                    List<ApduResponse> poApduResponseListVP = poSeResponseVP.getApduResponses();
+                    /* Add requests and responses to the digest processor */
+                    for (int i = 0; i < poApduRequestList.size(); i++) {
+                        samCommandsProcessor.pushPoExchangeData(poApduRequestList.get(i),
+                                poApduResponseListVP.get(i));
+                    }
+                    /* Track Read Record commands for later use to build anticipated responses. */
+                    AnticipatedResponseBuilder.storeCommandResponse(poBuilderParsers,
+                            poApduRequestList, poApduResponseListVP, splitCommandIndex,
+                            splitCommandIndex + poApduResponseListVP.size() - 1);
+                    /* Append response to the output response list */
+                    poApduResponseList.addAll(poApduResponseListVP);
+                    /* update the splitCommandIndex and loop */
+                    splitCommandIndex = newSplitCommandIndex;
+                    break;
+                case NOT_SET:
+                default:
+                    throw new IllegalStateException("Unexpected SeRequest split");
+            }
+        }
+
+        return new SeResponse(true, true, poSeResponse.getSelectionStatus(), poApduResponseList);
     }
 
     /**
