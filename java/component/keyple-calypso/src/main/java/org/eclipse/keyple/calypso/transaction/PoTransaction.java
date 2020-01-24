@@ -182,7 +182,7 @@ public final class PoTransaction {
     private SeResponse processAtomicOpening(SessionAccessLevel accessLevel, byte openingSfiToSelect,
             byte openingRecordNumberToRead, List<PoBuilderParser> poBuilderParsers)
             throws KeypleReaderException {
-
+        int splitCommandIndex;
         // gets the terminal challenge
         byte[] sessionTerminalChallenge = samCommandsProcessor.getSessionTerminalChallenge();
 
@@ -198,10 +198,11 @@ public final class PoTransaction {
         /* Add the resulting ApduRequest to the PO ApduRequest list */
         poApduRequestList.add(poOpenSession.getApduRequest());
 
-        /* Add all optional PoSendableInSession commands to the PO ApduRequest list */
-        if (poBuilderParsers != null) {
-            buildApduRequestsList(poBuilderParsers, poApduRequestList);
-        }
+        /*
+         * Add all optional PoSendableInSession commands to the PO ApduRequest list, get the
+         * SplitCommandIndex (should be -1 if no split is needed)
+         */
+        splitCommandIndex = buildApduRequests(poBuilderParsers, poApduRequestList);
 
         /* Create a SeRequest from the ApduRequest list, PO AID as Selector, keep channel open */
         SeRequest poSeRequest = new SeRequest(poApduRequestList);
@@ -235,17 +236,10 @@ public final class PoTransaction {
                     poApduResponseList);
         }
 
-        for (ApduResponse apduR : poApduResponseList) {
-            if (!apduR.isSuccessful()) {
-                throw new KeypleCalypsoSecureSessionException("Invalid response",
-                        KeypleCalypsoSecureSessionException.Type.PO, poApduRequestList,
-                        poApduResponseList);
-            }
-        }
-
         /* Track Read Records for later use to build anticipated responses. */
         AnticipatedResponseBuilder.storeCommandResponse(poBuilderParsers, poApduRequestList,
-                poApduResponseList, true);
+                poApduResponseList, 1,
+                splitCommandIndex >= 0 ? poBuilderParsers.size() - 1 : splitCommandIndex);
 
         /* Parse the response to Open Secure Session (the first item of poApduResponseList) */
         AbstractOpenSessionRespPars poOpenSessionPars = AbstractOpenSessionRespPars
@@ -300,10 +294,68 @@ public final class PoTransaction {
             }
         }
 
-        sessionState = SessionState.SESSION_OPEN;
-
         /* Remove Open Secure Session response and create a new SeResponse */
         poApduResponseList.remove(0);
+
+        /* Specific processing if the request has been split */
+        while (splitCommandIndex >= 0) {
+            /* Execute a loop, since the request can be split several times. */
+            /* Determine the command that made the request split */
+            PoBuilderParser.SplitCommandInfo splitCommandInfo =
+                    poBuilderParsers.get(splitCommandIndex).getSplitCommandInfo();
+            switch (splitCommandInfo) {
+                case VERIFY_PIN:
+                    logger.debug("VERIFY PIN split  found!");
+                    /*
+                     * we expect here that the last received response is the answer to a Get
+                     * Challenge command
+                     */
+                    byte[] poChallenge =
+                            poApduResponseList.get(poApduResponseList.size() - 1).getDataOut();
+                    /* Remove this PoTransaction internal response from the received list */
+                    poApduResponseList.remove(poApduResponseList.size() - 1);
+                    /* Retrieve the Verify Pin partially built command */
+                    VerifyPinCmdBuild verifyPinCmdBuild = (VerifyPinCmdBuild) poBuilderParsers
+                            .get(splitCommandIndex + 1).getCommandBuilder();
+                    /* Get the encrypted PIN with the help of the SAM */
+                    byte[] pinCipheredData = samCommandsProcessor.getCipheredPinData(poChallenge,
+                            verifyPinCmdBuild.getPin(), null);
+                    /* Complete the Verify Pin command builder */
+                    verifyPinCmdBuild.setCipheredPinData(pinCipheredData);
+                    /* Remove the Get Challenge command from the builder list (internal command) */
+                    poBuilderParsers.remove(splitCommandIndex);
+                    /* Clear the request list to prepare the following transmission */
+                    poApduRequestList.clear();
+                    /* Get the next ApduRequest list and keep the possible split index */
+                    int newSplitCommandIndex =
+                            buildApduRequests(poBuilderParsers, poApduRequestList);
+                    /* Create a SeRequest from the ApduRequest list */
+                    poSeRequest = new SeRequest(poApduRequestList);
+                    /* Transmit the commands to the PO and get the responses */
+                    SeResponse poSeResponseVP = poReader.transmit(poSeRequest);
+                    List<ApduResponse> poApduResponseListVP = poSeResponseVP.getApduResponses();
+                    /* Add requests and responses to the digest processor */
+                    for (int i = 0; i < poApduRequestList.size(); i++) {
+                        samCommandsProcessor.pushPoExchangeData(poApduRequestList.get(i),
+                                poApduResponseListVP.get(i));
+                    }
+                    /* Track Read Record commands for later use to build anticipated responses. */
+                    AnticipatedResponseBuilder.storeCommandResponse(poBuilderParsers,
+                            poApduRequestList, poApduResponseListVP, splitCommandIndex,
+                            splitCommandIndex + poApduResponseListVP.size() - 1);
+                    /* Append response to the output response list */
+                    poApduResponseList.addAll(poApduResponseListVP);
+                    /* update the splitCommandIndex and loop */
+                    splitCommandIndex = newSplitCommandIndex;
+                    break;
+                case NOT_SET:
+                default:
+                    throw new IllegalStateException("Unexpected SeRequest split");
+            }
+        }
+
+
+        sessionState = SessionState.SESSION_OPEN;
 
         return new SeResponse(true, true, poSeResponse.getSelectionStatus(), poApduResponseList);
     }
@@ -311,24 +363,33 @@ public final class PoTransaction {
     /**
      * Build an ApduRequest List from command list (PoBuilderParser).
      * <p>
-     * If a 'split' command is present, the process stops are the method return true.
+     * When a "split" command is found, the process stops and the method returns the index of the
+     * split command, if not -1 is returned.
+     * <p>
+     * If the {@link PoBuilderParser} list is null or empty, nothing is added to the
+     * {@link ApduRequest} list and returned split command index is -1
+     * <p>
+     * All processed commands (placed before a split command) are set as sent.
      * 
      * @param poBuilderParsers a po commands list to be sent in session
      * @param apduRequestList the list of the next Apdu requests to send to the PO
-     * @return true if the initial list has been split (there are still Apdu to send)
+     * @return the index of the split command in the initial list
      */
-    private boolean buildApduRequestsList(List<PoBuilderParser> poBuilderParsers,
+    private int buildApduRequests(List<PoBuilderParser> poBuilderParsers,
             List<ApduRequest> apduRequestList) {
-        for (PoBuilderParser poBuilderParser : poBuilderParsers) {
-            if (!poBuilderParser.isSent()) {
-                apduRequestList.add(poBuilderParser.getCommandBuilder().getApduRequest());
-                poBuilderParser.setSent();
-                if (poBuilderParser.isSplitCommand()) {
-                    return true;
+        if (poBuilderParsers != null) {
+            for (int i = 0; i < poBuilderParsers.size(); i++) {
+                PoBuilderParser poBuilderParser = poBuilderParsers.get(i);
+                if (!poBuilderParser.isSent()) {
+                    apduRequestList.add(poBuilderParser.getCommandBuilder().getApduRequest());
+                    poBuilderParser.setSent();
+                    if (poBuilderParser.isSplitCommand()) {
+                        return i;
+                    }
                 }
             }
         }
-        return false;
+        return -1;
     }
 
     /**
@@ -355,7 +416,7 @@ public final class PoTransaction {
 
         // Get PO ApduRequest List from PoSendableInSession List
         List<ApduRequest> poApduRequestList = new ArrayList<ApduRequest>();
-        this.buildApduRequestsList(poBuilderParsers, poApduRequestList);
+        this.buildApduRequests(poBuilderParsers, poApduRequestList);
 
         /*
          * Create a SeRequest from the ApduRequest list, PO AID as Selector, manage the logical
@@ -392,17 +453,17 @@ public final class PoTransaction {
                     poApduResponseList);
         }
 
-        for (ApduResponse apduR : poApduResponseList) {
-            if (!apduR.isSuccessful()) {
-                throw new KeypleCalypsoSecureSessionException("Invalid response",
-                        KeypleCalypsoSecureSessionException.Type.PO, poApduRequestList,
-                        poApduResponseList);
-            }
-        }
+        // for (ApduResponse apduR : poApduResponseList) {
+        // if (!apduR.isSuccessful()) {
+        // throw new KeypleCalypsoSecureSessionException("Invalid response",
+        // KeypleCalypsoSecureSessionException.Type.PO, poApduRequestList,
+        // poApduResponseList);
+        // }
+        // }
 
         /* Track Read Records for later use to build anticipated responses. */
         AnticipatedResponseBuilder.storeCommandResponse(poBuilderParsers, poApduRequestList,
-                poApduResponseList, false);
+                poApduResponseList, 0, poBuilderParsers.size() - 1);
 
         /*
          * Add all commands data to the digest computation if this method is called within a Secure
@@ -486,7 +547,7 @@ public final class PoTransaction {
 
         /* Get PO ApduRequest List from PoSendableInSession List - for the first PO exchange */
         List<ApduRequest> poApduRequestList = new ArrayList<ApduRequest>();
-        this.buildApduRequestsList(poModificationCommands, poApduRequestList);
+        this.buildApduRequests(poModificationCommands, poApduRequestList);
 
         /* Compute "anticipated" Digest Update (for optional poModificationCommands) */
         if ((poModificationCommands != null) && !poApduRequestList.isEmpty()) {
@@ -813,12 +874,12 @@ public final class PoTransaction {
          * @param poBuilderParsers the list of commands sent to the PO
          * @param apduRequests the sent apduRequests
          * @param apduResponses the received apduResponses
-         * @param skipFirstItem a flag to indicate if the first apduRequest/apduResponse pair has to
-         *        be ignored or not.
+         * @param first the item of the first command to consider.
+         * @param last the item of the last command to consider.
          */
         static void storeCommandResponse(List<PoBuilderParser> poBuilderParsers,
-                List<ApduRequest> apduRequests, List<ApduResponse> apduResponses,
-                Boolean skipFirstItem) {
+                List<ApduRequest> apduRequests, List<ApduResponse> apduResponses, int first,
+                int last) {
             if (poBuilderParsers != null) {
                 /*
                  * Store Read Records' requests and responses for later use to build anticipated
@@ -826,21 +887,26 @@ public final class PoTransaction {
                  */
                 Iterator<ApduRequest> apduRequestIterator = apduRequests.iterator();
                 Iterator<ApduResponse> apduResponseIterator = apduResponses.iterator();
-                if (Boolean.TRUE.equals(skipFirstItem)) {
-                    /* case of processAtomicOpening */
-                    apduRequestIterator.next();
-                    apduResponseIterator.next();
-                }
                 /* Iterate over the poCommandsInsideSession list */
-                for (PoBuilderParser poCommand : poBuilderParsers) {
+                for (int i = 0; i < last; i++) {
+                    if (i < first) {
+                        /* ex. case of processAtomicOpening */
+                        continue;
+                    }
+                    PoBuilderParser poCommand = poBuilderParsers.get(i);
                     if ((poCommand).getCommandBuilder() instanceof ReadRecordsCmdBuild) {
                         ApduRequest apduRequest = apduRequestIterator.next();
+                        // TODO improve this ugly code
                         byte sfi = (byte) ((apduRequest.getBytes()[OFFSET_P2] >> 3) & 0x1F);
                         sfiCommandResponseHashMap.put(sfi,
                                 new CommandResponse(apduRequest, apduResponseIterator.next()));
                     } else {
-                        apduRequestIterator.next();
-                        apduResponseIterator.next();
+                        if (apduRequestIterator.hasNext()) {
+                            apduRequestIterator.next();
+                            apduResponseIterator.next();
+                        } else {
+                            return;
+                        }
                     }
                 }
             }

@@ -11,18 +11,20 @@
  ********************************************************************************/
 package org.eclipse.keyple.calypso.transaction;
 
-import static org.eclipse.keyple.calypso.command.po.PoBuilderParser.SplitCommand.VERIFY_PIN;
 import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.keyple.calypso.command.po.AbstractPoCommandBuilder;
 import org.eclipse.keyple.calypso.command.po.AbstractPoResponseParser;
 import org.eclipse.keyple.calypso.command.po.PoBuilderParser;
 import org.eclipse.keyple.calypso.command.po.PoSvCommand;
+import org.eclipse.keyple.calypso.command.po.builder.security.PinOperation;
 import org.eclipse.keyple.calypso.command.po.builder.security.PoGetChallengeCmdBuild;
+import org.eclipse.keyple.calypso.command.po.builder.security.VerifyPinCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvGetCmdBuild;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 /**
  * The PO command manager is used to keep builders and parsers between the time the commands are
@@ -131,13 +133,15 @@ class PoCommandsManager {
          * insert Get Challenge into the command list, mark it as a split command, the next command
          * is VERIFY_PIN
          */
-        poBuilderParserList.add(new PoBuilderParser(
-                new PoGetChallengeCmdBuild(calypsoPo.getPoClass()), VERIFY_PIN));
+        poBuilderParserList
+                .add(new PoBuilderParser(new PoGetChallengeCmdBuild(calypsoPo.getPoClass()),
+                        PoBuilderParser.SplitCommandInfo.VERIFY_PIN));
         /*
-         * insert an empty command in the list of commands that will later be replaced by the real
-         * "verify pin" command
+         * insert intermediate Verify Pin command builder in the list of commands that will later be
+         * replaced by the real "verify pin" command
          */
-        poBuilderParserList.add(new PoBuilderParser(null));
+        poBuilderParserList.add(new PoBuilderParser(new VerifyPinCmdBuild(calypsoPo.getPoClass(),
+                PinOperation.SEND_ENCRYPTED_PIN, pin)));
 
         /* return and post-increment index */
         preparedCommandIndex += 2;

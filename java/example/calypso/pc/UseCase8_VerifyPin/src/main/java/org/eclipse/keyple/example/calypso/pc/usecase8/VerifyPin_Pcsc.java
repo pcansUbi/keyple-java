@@ -13,6 +13,7 @@ package org.eclipse.keyple.example.calypso.pc.usecase8;
 
 
 
+import org.eclipse.keyple.calypso.command.po.parser.ReadDataStructure;
 import org.eclipse.keyple.calypso.transaction.*;
 import org.eclipse.keyple.core.selection.MatchingSelection;
 import org.eclipse.keyple.core.selection.SeSelection;
@@ -128,14 +129,35 @@ public class VerifyPin_Pcsc {
             int verifyPinIndex = 0;
 
             try {
+                byte[] pin = {(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30};
+                poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_EventLog,
+                        ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
+                        String.format("EventLog (SFI=%02X, recnbr=%d))",
+                                CalypsoClassicInfo.SFI_EventLog,
+                                CalypsoClassicInfo.RECORD_NUMBER_1));
+                poTransaction.prepareVerifyPinPlain(pin);
+                poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_ContractList,
+                        ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
+                        String.format("ContractList (SFI=%02X))",
+                                CalypsoClassicInfo.SFI_ContractList));
+                poTransaction.prepareVerifyPinEncrypted(pin);
+                poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_EventLog,
+                        ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
+                        String.format("EventLog (SFI=%02X, recnbr=%d))",
+                                CalypsoClassicInfo.SFI_EventLog,
+                                CalypsoClassicInfo.RECORD_NUMBER_1));
+                poTransaction.prepareVerifyPinPlain(pin);
+                poTransaction.prepareVerifyPinEncrypted(pin);
+                poTransaction.prepareVerifyPinPlain(pin);
+                poTransaction.prepareReadRecordsCmd(CalypsoClassicInfo.SFI_EventLog,
+                        ReadDataStructure.SINGLE_RECORD_DATA, CalypsoClassicInfo.RECORD_NUMBER_1,
+                        String.format("EventLog (SFI=%02X, recnbr=%d))",
+                                CalypsoClassicInfo.SFI_EventLog,
+                                CalypsoClassicInfo.RECORD_NUMBER_1));
+
                 logger.warn("Open session.");
                 if (poTransaction.processOpening(PoTransaction.ModificationMode.ATOMIC,
                         PoTransaction.SessionAccessLevel.SESSION_LVL_DEBIT, (byte) 0, (byte) 0)) {
-
-                    byte[] pin = {(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30};
-                    verifyPinIndex = poTransaction.prepareVerifyPinPlain(pin);
-
-                    poTransaction.processPoCommandsInSession();
 
                     logger.warn("Close session.");
                     if (poTransaction.processClosing(ChannelControl.CLOSE_AFTER)) {

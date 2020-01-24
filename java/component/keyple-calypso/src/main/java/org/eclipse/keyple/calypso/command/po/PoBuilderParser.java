@@ -24,51 +24,87 @@ public class PoBuilderParser
     private AbstractPoResponseParser poResponseParser;
     private boolean isSent;
     private final boolean isSplitCommand;
-    private final SplitCommand splitCommand;
+    private final SplitCommandInfo splitCommandInfo;
 
-    public enum SplitCommand {
-        NOT_SET, GET_CHALLENGE, VERIFY_PIN
+    /** Indicates the command that requires the request to be split. */
+    public enum SplitCommandInfo {
+        NOT_SET, VERIFY_PIN
     };
 
+    /**
+     * Constructor for regular commands
+     * 
+     * @param poCommandBuilder the command builder to be stored
+     */
     public PoBuilderParser(AbstractPoCommandBuilder poCommandBuilder) {
         this.poCommandBuilder = poCommandBuilder;
         isSent = false;
         isSplitCommand = false;
-        this.splitCommand = SplitCommand.NOT_SET;
+        this.splitCommandInfo = SplitCommandInfo.NOT_SET;
     }
 
-    public PoBuilderParser(AbstractPoCommandBuilder poCommandBuilder, SplitCommand splitCommand) {
+    /**
+     * Constructor for splitting request commands
+     * 
+     * @param poCommandBuilder the command builder to be stored
+     * @param splitCommandInfo the split command identifier
+     */
+    public PoBuilderParser(AbstractPoCommandBuilder poCommandBuilder,
+            SplitCommandInfo splitCommandInfo) {
         this.poCommandBuilder = poCommandBuilder;
         isSent = false;
         isSplitCommand = true;
-        this.splitCommand = splitCommand;
+        this.splitCommandInfo = splitCommandInfo;
     }
 
+    /**
+     * @return the builder
+     */
     public AbstractPoCommandBuilder getCommandBuilder() {
         return poCommandBuilder;
     }
 
+    /**
+     * @return the parser
+     */
     public AbstractPoResponseParser getResponseParser() {
         return poResponseParser;
     }
 
+    /**
+     * @return true if the command has been sent
+     */
     public boolean isSent() {
         return isSent;
     }
 
+    /**
+     * Sets the sent status
+     */
     public void setSent() {
         isSent = true;
     }
 
+    /**
+     * Sets the response parser when available
+     * 
+     * @param poResponseParser the response parser
+     */
     public void setResponseParser(AbstractPoResponseParser poResponseParser) {
         this.poResponseParser = poResponseParser;
     }
 
+    /**
+     * @return true if the current command requires the split of the request
+     */
     public boolean isSplitCommand() {
         return isSplitCommand;
     }
 
-    public SplitCommand getSplitCommand() {
-        return splitCommand;
+    /**
+     * @return the identification of the command that requires the split of the request
+     */
+    public SplitCommandInfo getSplitCommandInfo() {
+        return splitCommandInfo;
     }
 }
