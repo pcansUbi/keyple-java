@@ -9,38 +9,40 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  ********************************************************************************/
-package org.eclipse.keyple.calypso.command.po;
+package org.eclipse.keyple.calypso.transaction;
 
 import org.eclipse.keyple.calypso.command.CalypsoBuilderParser;
+import org.eclipse.keyple.calypso.command.po.AbstractPoCommandBuilder;
+import org.eclipse.keyple.calypso.command.po.AbstractPoResponseParser;
+import org.eclipse.keyple.calypso.command.po.PoSendableInSession;
 
 /**
- * The PoBuilderParser class contains the builder of a {@link PoSendableInSession} command
+ * The PoCommand class contains the builder of a {@link PoSendableInSession} command
  * <p>
  * A setter allows to associate the parser object.
  */
-public class PoBuilderParser
-        implements CalypsoBuilderParser<AbstractPoCommandBuilder, AbstractPoResponseParser> {
-    private final AbstractPoCommandBuilder poCommandBuilder;
+class PoCommand {
+    private AbstractPoCommandBuilder poCommandBuilder;
     private AbstractPoResponseParser poResponseParser;
     private boolean isSent;
-    private final boolean isSplitCommand;
-    private final SplitCommandInfo splitCommandInfo;
 
     /** Indicates the command that requires the request to be split. */
     public enum SplitCommandInfo {
         NOT_SET, VERIFY_PIN
-    };
+    }
+
+    /** Empty constructor */
+    public PoCommand()  {
+    }
 
     /**
      * Constructor for regular commands
      * 
      * @param poCommandBuilder the command builder to be stored
      */
-    public PoBuilderParser(AbstractPoCommandBuilder poCommandBuilder) {
+    public PoCommand(AbstractPoCommandBuilder poCommandBuilder) {
         this.poCommandBuilder = poCommandBuilder;
         isSent = false;
-        isSplitCommand = false;
-        this.splitCommandInfo = SplitCommandInfo.NOT_SET;
     }
 
     /**
@@ -49,12 +51,10 @@ public class PoBuilderParser
      * @param poCommandBuilder the command builder to be stored
      * @param splitCommandInfo the split command identifier
      */
-    public PoBuilderParser(AbstractPoCommandBuilder poCommandBuilder,
-            SplitCommandInfo splitCommandInfo) {
+    public PoCommand(AbstractPoCommandBuilder poCommandBuilder,
+                     SplitCommandInfo splitCommandInfo) {
         this.poCommandBuilder = poCommandBuilder;
         isSent = false;
-        isSplitCommand = true;
-        this.splitCommandInfo = splitCommandInfo;
     }
 
     /**
@@ -98,13 +98,13 @@ public class PoBuilderParser
      * @return true if the current command requires the split of the request
      */
     public boolean isSplitCommand() {
-        return isSplitCommand;
+        return false;
     }
 
     /**
      * @return the identification of the command that requires the split of the request
      */
     public SplitCommandInfo getSplitCommandInfo() {
-        return splitCommandInfo;
+        return SplitCommandInfo.NOT_SET;
     }
 }

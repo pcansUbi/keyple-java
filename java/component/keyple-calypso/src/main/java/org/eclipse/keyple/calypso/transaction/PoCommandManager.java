@@ -15,31 +15,31 @@ import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.keyple.calypso.command.po.AbstractPoCommandBuilder;
 import org.eclipse.keyple.calypso.command.po.AbstractPoResponseParser;
-import org.eclipse.keyple.calypso.command.po.PoBuilderParser;
 import org.eclipse.keyple.calypso.command.po.PoSvCommand;
 import org.eclipse.keyple.calypso.command.po.builder.security.PinOperation;
 import org.eclipse.keyple.calypso.command.po.builder.security.PoGetChallengeCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.security.VerifyPinCmdBuild;
 import org.eclipse.keyple.calypso.command.po.builder.storedvalue.SvGetCmdBuild;
 import org.eclipse.keyple.core.command.AbstractApduResponseParser;
+import org.eclipse.keyple.core.seproxy.message.SeRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
 /**
  * The PO command manager is used to keep builders and parsers between the time the commands are
- * created and the time the parsers are going to be used.
+ * created and the time their responses are parsed.
  * <p>
  * A flag (preparedCommandsProcessed) is used to manage the reset of the command list. It allows the
  * builders to be kept until the application creates a new list of commands. This flag is reset by
  * calling the method notifyCommandsProcessed.
  */
-class PoCommandsManager {
+class PoCommandManager {
     /* logger */
-    private static final Logger logger = LoggerFactory.getLogger(PoCommandsManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(PoCommandManager.class);
 
     /** The list to contain the prepared commands and their parsers */
-    private final List<PoBuilderParser> poBuilderParserList = new ArrayList<PoBuilderParser>();
+    private final List<PoCommand> poCommandList = new ArrayList<PoCommand>();
     /** The command index, incremented each time a command is added */
     private int preparedCommandIndex;
     private boolean preparedCommandsProcessed;
@@ -51,7 +51,7 @@ class PoCommandsManager {
     private SvSettings.Action svAction = SvSettings.Action.DO;
     private boolean svOperationPending;
 
-    PoCommandsManager() {
+    PoCommandManager() {
         preparedCommandsProcessed = true;
         svOperationPending = false;
         secureSessionIsOpen = false;
@@ -64,7 +64,7 @@ class PoCommandsManager {
      */
     private void updateBuilderParserList() {
         if (preparedCommandsProcessed) {
-            poBuilderParserList.clear();
+            poCommandList.clear();
             preparedCommandIndex = 0;
             preparedCommandsProcessed = false;
         }
@@ -78,6 +78,14 @@ class PoCommandsManager {
      */
     public void setSecureSessionIsOpen(boolean secureSessionIsOpen) {
         this.secureSessionIsOpen = secureSessionIsOpen;
+    }
+
+    void addPoCommand(PoCommand poCommand) {
+
+    }
+
+    List<SeRequest> getPoSeRequests() {
+        return null;
     }
 
     /**
@@ -100,7 +108,7 @@ class PoCommandsManager {
          */
         updateBuilderParserList();
 
-        poBuilderParserList.add(new PoBuilderParser(commandBuilder));
+        poCommandList.add(new PoCommand(commandBuilder));
         /* return and post-increment index */
         preparedCommandIndex++;
         /* not an SV Get command */
@@ -133,14 +141,14 @@ class PoCommandsManager {
          * insert Get Challenge into the command list, mark it as a split command, the next command
          * is VERIFY_PIN
          */
-        poBuilderParserList
-                .add(new PoBuilderParser(new PoGetChallengeCmdBuild(calypsoPo.getPoClass()),
-                        PoBuilderParser.SplitCommandInfo.VERIFY_PIN));
+        poCommandList
+                .add(new PoCommand(new PoGetChallengeCmdBuild(calypsoPo.getPoClass()),
+                        PoCommand.SplitCommandInfo.VERIFY_PIN));
         /*
          * insert intermediate Verify Pin command builder in the list of commands that will later be
          * replaced by the real "verify pin" command
          */
-        poBuilderParserList.add(new PoBuilderParser(new VerifyPinCmdBuild(calypsoPo.getPoClass(),
+        poCommandList.add(new PoCommand(new VerifyPinCmdBuild(calypsoPo.getPoClass(),
                 PinOperation.SEND_ENCRYPTED_PIN, pin)));
 
         /* return and post-increment index */
@@ -189,7 +197,7 @@ class PoCommandsManager {
             lastCommandIsSvGet = true;
         } else {
             // SvReload, SvDebit or SvUndebit
-            if (!poBuilderParserList.isEmpty()) {
+            if (!poCommandList.isEmpty()) {
                 throw new IllegalStateException(
                         "This SV command can only be placed in the first position in the list of prepared commands");
             }
@@ -217,7 +225,7 @@ class PoCommandsManager {
             lastCommandIsSvGet = false;
         }
 
-        poBuilderParserList.add(new PoBuilderParser((AbstractPoCommandBuilder) commandBuilder));
+        poCommandList.add(new PoCommand((AbstractPoCommandBuilder) commandBuilder));
         /* return and post-increment index */
         preparedCommandIndex++;
         return (preparedCommandIndex - 1);
@@ -250,12 +258,12 @@ class PoCommandsManager {
     }
 
     /**
-     * @return the current PoBuilderParser list
+     * @return the current PoCommand list
      */
-    public List<PoBuilderParser> getPoBuilderParserList() {
+    public List<PoCommand> getPoCommandList() {
         /* here we make sure to clear the list if it has already been processed */
         updateBuilderParserList();
-        return poBuilderParserList;
+        return poCommandList;
     }
 
     /**
@@ -265,12 +273,12 @@ class PoCommandsManager {
      * @return the parser
      */
     public AbstractApduResponseParser getResponseParser(int commandIndex) {
-        if (commandIndex < 0 || commandIndex >= poBuilderParserList.size()) {
+        if (commandIndex < 0 || commandIndex >= poCommandList.size()) {
             throw new IllegalArgumentException(
                     String.format("Bad command index: index = %d, number of commands = %d",
-                            commandIndex, poBuilderParserList.size()));
+                            commandIndex, poCommandList.size()));
         }
-        return poBuilderParserList.get(commandIndex).getResponseParser();
+        return poCommandList.get(commandIndex).getResponseParser();
     }
 
     /**
@@ -279,7 +287,7 @@ class PoCommandsManager {
      * @return the parser index as an int
      */
     public int getSvGetResponseParserIndex() {
-        if (svGetIndex < 0 || svGetIndex != poBuilderParserList.size() - 1) {
+        if (svGetIndex < 0 || svGetIndex != poCommandList.size() - 1) {
             throw new IllegalStateException("No SvGet index is available");
         }
         return svGetIndex;
@@ -291,9 +299,9 @@ class PoCommandsManager {
      * @return the parser
      */
     public AbstractPoResponseParser getSvOperationResponseParser() {
-        if (svOpIndex < 0 || svOpIndex >= poBuilderParserList.size()) {
+        if (svOpIndex < 0 || svOpIndex >= poCommandList.size()) {
             throw new IllegalStateException("Illegal SV operation parser index: " + svOpIndex);
         }
-        return poBuilderParserList.get(svOpIndex).getResponseParser();
+        return poCommandList.get(svOpIndex).getResponseParser();
     }
 }
