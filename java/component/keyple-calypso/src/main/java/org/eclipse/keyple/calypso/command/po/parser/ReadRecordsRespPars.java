@@ -56,12 +56,22 @@ public final class ReadRecordsRespPars extends AbstractPoResponseParser {
     private byte recordNumber;
 
     /**
+     * Constructor
+     * 
+     * @param apduResponse the response from the PO
+     */
+    public ReadRecordsRespPars(ApduResponse apduResponse) {
+        super(apduResponse);
+    }
+
+    /**
      * Instantiates a new ReadRecordsRespPars.
      * 
      * @param apduResponse the response from the PO
      * @param recordNumber the record number
      * @param readDataStructure the type of content in the response to parse
      */
+    @Deprecated
     public ReadRecordsRespPars(ApduResponse apduResponse, ReadDataStructure readDataStructure,
             byte recordNumber) {
         super(apduResponse);
@@ -74,6 +84,7 @@ public final class ReadRecordsRespPars extends AbstractPoResponseParser {
      * 
      * @return true or false
      */
+    @Deprecated
     public boolean isCounterFile() {
         return readDataStructure == ReadDataStructure.SINGLE_COUNTER
                 || readDataStructure == ReadDataStructure.MULTIPLE_COUNTER;
@@ -90,6 +101,7 @@ public final class ReadRecordsRespPars extends AbstractPoResponseParser {
      * @return a map of records
      * @exception IllegalStateException if the parser has not been initialized
      */
+    @Deprecated
     public SortedMap<Integer, byte[]> getRecords() {
         SortedMap<Integer, byte[]> records = new TreeMap<Integer, byte[]>();
         if (!response.isSuccessful()) {
@@ -127,6 +139,7 @@ public final class ReadRecordsRespPars extends AbstractPoResponseParser {
      * @return a map of counters
      * @exception IllegalStateException if the parser has not been initialized
      */
+    @Deprecated
     public SortedMap<Integer, Integer> getCounters() {
         SortedMap<Integer, Integer> counters = new TreeMap<Integer, Integer>();
         if (!response.isSuccessful()) {
@@ -156,6 +169,7 @@ public final class ReadRecordsRespPars extends AbstractPoResponseParser {
         return counters;
     }
 
+    @Deprecated
     @Override
     public String toString() {
         String string;

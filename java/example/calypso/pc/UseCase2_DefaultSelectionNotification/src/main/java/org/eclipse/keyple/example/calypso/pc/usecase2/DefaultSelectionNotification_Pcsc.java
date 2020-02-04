@@ -182,14 +182,12 @@ public class DefaultSelectionNotification_Pcsc implements ReaderObserver {
                 /*
                  * Retrieve the data read from the parser updated during the selection process
                  */
-                ReadRecordsRespPars readEnvironmentParser = (ReadRecordsRespPars) matchingSelection
-                        .getResponseParser(readEnvironmentParserIndex);
 
-                byte environmentAndHolder[] = (readEnvironmentParser.getRecords())
-                        .get((int) CalypsoClassicInfo.RECORD_NUMBER_1);
-
-                /* Log the result */
-                logger.info("Environment file data: {}", ByteArrayUtil.toHex(environmentAndHolder));
+                /* Retreive the Environment and Holder file stored in CalypsoPo */
+                logger.info("Environment file data: {}",
+                        ByteArrayUtil.toHex(
+                                calypsoPo.getRecord(CalypsoClassicInfo.SFI_EnvironmentAndHolder,
+                                        CalypsoClassicInfo.RECORD_NUMBER_1)));
 
                 /* Go on with the reading of the first record of the EventLog file */
                 logger.info(

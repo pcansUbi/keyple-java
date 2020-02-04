@@ -13,6 +13,8 @@ package org.eclipse.keyple.calypso.transaction;
 
 
 
+import java.util.HashMap;
+import java.util.Map;
 import org.eclipse.keyple.calypso.command.PoClass;
 import org.eclipse.keyple.calypso.command.po.PoRevision;
 import org.eclipse.keyple.calypso.command.po.parser.GetDataFciRespPars;
@@ -65,6 +67,7 @@ public final class CalypsoPo extends AbstractMatchingSe {
     private byte[] poAtr;
     private int modificationsCounterMax;
     private boolean modificationCounterIsInBytes = true;
+    private Map<Integer, byte[]> records = new HashMap<Integer, byte[]>();
 
     /**
      * Constructor.
@@ -420,5 +423,31 @@ public final class CalypsoPo extends AbstractMatchingSe {
             }
             return PoClass.ISO;
         }
+    }
+
+    /**
+     * Sets the data of a record in the mirror memory of the Calypso PO
+     * 
+     * @param sfi the file short identifier
+     * @param record the record index
+     * @param data the data
+     */
+    public void setRecord(byte sfi, byte record, byte[] data) {
+        // compute the unique key per record
+        int key = ((sfi & 0xff) << 8) | (record & 0xff);
+        records.put(key, data);
+    }
+
+    /**
+     * Gets the data of a record from the mirror memory of the Calypso PO
+     * 
+     * @param sfi the file short identifier
+     * @param record the record index
+     * @return a byte array containing the record data or null if no record was found
+     */
+    public byte[] getRecord(byte sfi, byte record) {
+        // compute the unique key per record
+        int key = ((sfi & 0xff) << 8) | (record & 0xff);
+        return records.get(key);
     }
 }
