@@ -49,7 +49,7 @@ public class WsPClient implements ClientNode {
     final private String serverNodeId;
     final private String baseUrl;
 
-    private DtoHandler dtoHandler;
+    private DtoHandler dtoNode;
 
     public WsPClient(String baseUrl, String keypleDtoEndpoint, String pollingEndpoint,
             String clientNodeId, String serverNodeId) {
@@ -99,7 +99,7 @@ public class WsPClient implements ClientNode {
             KeypleDto responseDTO = KeypleDtoHelper.fromJsonObject(httpResponse);
             TransportDto transportDto = new WsPTransportDTO(responseDTO, this);
             // connection
-            final TransportDto sendback = this.dtoHandler.onDTO(transportDto);
+            final TransportDto sendback = this.dtoNode.onDTO(transportDto);
 
             // if sendBack is not a noResponse (can be a keyple request or keyple response)
             if (!KeypleDtoHelper.isNoResponse(sendback.getKeypleDTO())) {
@@ -140,16 +140,10 @@ public class WsPClient implements ClientNode {
         sendDTO(new WsPTransportDTO(message, null));
     }
 
-    /*
-     * @Override public void update(KeypleDto event) { this.sendDTO(event); }
-     */
 
-    /*
-     * DtoNode
-     */
     @Override
-    public void setDtoHandler(DtoHandler dtoHandler) {
-        this.dtoHandler = dtoHandler;
+    public void bindDtoNode(DtoNode dtoNode) {
+        this.dtoNode = dtoNode;
     }
 
     @Override

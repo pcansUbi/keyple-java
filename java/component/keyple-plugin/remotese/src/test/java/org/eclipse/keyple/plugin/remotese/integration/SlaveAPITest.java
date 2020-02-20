@@ -22,6 +22,8 @@ import org.eclipse.keyple.plugin.remotese.nativese.SlaveAPI;
 import org.eclipse.keyple.plugin.remotese.pluginse.MasterAPI;
 import org.eclipse.keyple.plugin.remotese.pluginse.VirtualObservableReader;
 import org.eclipse.keyple.plugin.remotese.pluginse.VirtualReader;
+import org.eclipse.keyple.plugin.remotese.transport.factory.ClientNode;
+import org.eclipse.keyple.plugin.remotese.transport.factory.ServerNode;
 import org.eclipse.keyple.plugin.remotese.transport.factory.TransportFactory;
 import org.eclipse.keyple.plugin.remotese.transport.impl.java.LocalClient;
 import org.eclipse.keyple.plugin.remotese.transport.impl.java.LocalTransportFactory;
@@ -60,7 +62,7 @@ public class SlaveAPITest {
     final long RPC_TIMEOUT = 1000;
 
     // Spy Object
-    SlaveAPI spySlaveAPI;
+    SlaveAPI slaveAPI;
 
     @Before
     public void setTup() throws Exception {
@@ -72,18 +74,20 @@ public class SlaveAPITest {
 
         logger.info("*** Init LocalTransportFactory");
         // use a local transport factory for testing purposes (only java calls between client and
-        // server)
-        // only one client and one server
+        // server). Only one client and one server bound together.
         factory = new LocalTransportFactory(SERVER_NODE_ID);
 
         logger.info("*** Bind Master Services");
         // bind Master services to server
-        masterAPI = Integration.createSpyMasterAPI(factory.getServer(), REMOTE_SE_PLUGIN_NAME);
+        ServerNode serverNode = factory.getServer();
+        masterAPI = Integration.createSpyMasterAPI(serverNode, REMOTE_SE_PLUGIN_NAME);
+        serverNode.bindDtoNode(masterAPI);
 
         logger.info("*** Bind Slave Services");
         // bind Slave services to client
-        spySlaveAPI =
-                Integration.createSpySlaveAPI(factory.getClient(CLIENT_NODE_ID), SERVER_NODE_ID);
+        ClientNode clientNode = factory.getClient(CLIENT_NODE_ID);
+        slaveAPI = Integration.createSpySlaveAPI(clientNode, SERVER_NODE_ID);
+        clientNode.bindDtoNode(slaveAPI);
 
         nativeReader =
                 Integration.createStubReader(NATIVE_READER_NAME, TransmissionMode.CONTACTLESS);
@@ -125,7 +129,7 @@ public class SlaveAPITest {
     @Test
     public void testOKConnect() throws Exception {
 
-        String sessionId = spySlaveAPI.connectReader(nativeReader);
+        String sessionId = slaveAPI.connectReader(nativeReader);
 
         // assert that a virtual reader has been created
         VirtualObservableReader virtualReader = (VirtualObservableReader) masterAPI.getPlugin()
@@ -137,7 +141,7 @@ public class SlaveAPITest {
         Assert.assertNotNull(sessionId);
 
         // disconnect
-        spySlaveAPI.disconnectReader("", nativeReader.getName());
+        slaveAPI.disconnectReader("", nativeReader.getName());
 
     }
 
@@ -155,7 +159,7 @@ public class SlaveAPITest {
         Map<String, String> options = new HashMap<String, String>();
         options.put(KEY, VALUE);
 
-        String sessionId = spySlaveAPI.connectReader(nativeReader, options);
+        String sessionId = slaveAPI.connectReader(nativeReader, options);
 
         // assert that a virtual reader has been created
         VirtualObservableReader virtualReader = (VirtualObservableReader) masterAPI.getPlugin()
@@ -168,7 +172,7 @@ public class SlaveAPITest {
         Assert.assertEquals(virtualReader.getParameters().get(KEY), VALUE);
 
         // disconnect
-        spySlaveAPI.disconnectReader("", nativeReader.getName());
+        slaveAPI.disconnectReader("", nativeReader.getName());
     }
 
     /**
@@ -180,17 +184,17 @@ public class SlaveAPITest {
     public void testKOConnectError() throws KeypleReaderException {
 
         // first connectReader is successful
-        String sessionId = spySlaveAPI.connectReader(nativeReader);
+        String sessionId = slaveAPI.connectReader(nativeReader);
 
         // should throw a DTO with an exception in master side KeypleReaderException
         try {
-            spySlaveAPI.connectReader(nativeReader);
+            slaveAPI.connectReader(nativeReader);
             // should ex be thrown
             Assert.fail();
         } catch (KeypleReaderException e) {
 
             // disconnect to cleanup
-            spySlaveAPI.disconnectReader("", nativeReader.getName());
+            slaveAPI.disconnectReader("", nativeReader.getName());
         }
 
     }
@@ -204,10 +208,10 @@ public class SlaveAPITest {
     public void testKOConnectServerError() throws Exception {
 
         // bind Slave to faulty client
-        spySlaveAPI = Integration.createSpySlaveAPI(new LocalClient(CLIENT_NODE_ID, null),
+        slaveAPI = Integration.createSpySlaveAPI(new LocalClient(CLIENT_NODE_ID, null),
                 SERVER_NODE_ID);
 
-        spySlaveAPI.connectReader(nativeReader);
+        slaveAPI.connectReader(nativeReader);
         // should throw a KeypleRemoteException in slave side
     }
 
@@ -224,7 +228,7 @@ public class SlaveAPITest {
     public void testOKConnectDisconnect() throws Exception {
 
         // connect
-        String sessionId = spySlaveAPI.connectReader(nativeReader);
+        String sessionId = slaveAPI.connectReader(nativeReader);
 
         VirtualReader virtualReader = (VirtualReader) masterAPI.getPlugin()
                 .getReaderByRemoteName(NATIVE_READER_NAME, CLIENT_NODE_ID);
@@ -232,7 +236,7 @@ public class SlaveAPITest {
         Assert.assertEquals(NATIVE_READER_NAME, virtualReader.getNativeReaderName());
 
         // disconnect
-        spySlaveAPI.disconnectReader(sessionId, nativeReader.getName());
+        slaveAPI.disconnectReader(sessionId, nativeReader.getName());
 
         // assert that the virtual reader has been destroyed
         Assert.assertEquals(0, masterAPI.getPlugin().getReaders().size());
@@ -267,10 +271,10 @@ public class SlaveAPITest {
     public void testKODisconnectServerError() throws Exception {
 
         // bind Slave to faulty client
-        spySlaveAPI = Integration.createSpySlaveAPI(new LocalClient(CLIENT_NODE_ID, null),
+        slaveAPI = Integration.createSpySlaveAPI(new LocalClient(CLIENT_NODE_ID, null),
                 SERVER_NODE_ID);
 
-        spySlaveAPI.disconnectReader("null", nativeReader.getName());
+        slaveAPI.disconnectReader("null", nativeReader.getName());
         // should throw a KeypleRemoteException in slave side
     }
 

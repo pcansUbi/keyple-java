@@ -21,6 +21,8 @@ import org.eclipse.keyple.core.seproxy.protocol.TransmissionMode;
 import org.eclipse.keyple.plugin.remotese.nativese.SlaveAPI;
 import org.eclipse.keyple.plugin.remotese.pluginse.MasterAPI;
 import org.eclipse.keyple.plugin.remotese.pluginse.VirtualReader;
+import org.eclipse.keyple.plugin.remotese.transport.factory.ClientNode;
+import org.eclipse.keyple.plugin.remotese.transport.factory.ServerNode;
 import org.eclipse.keyple.plugin.remotese.transport.factory.TransportFactory;
 import org.eclipse.keyple.plugin.remotese.transport.impl.java.LocalTransportFactory;
 import org.eclipse.keyple.plugin.stub.*;
@@ -56,7 +58,6 @@ public class VirtualReaderBaseTest {
     // Spy Object
     protected SlaveAPI slaveAPI;
 
-
     protected void initMasterNSlave() throws Exception {
         logger.info("------------------------------");
         logger.info("Test {}", name.getMethodName());
@@ -68,13 +69,18 @@ public class VirtualReaderBaseTest {
         factory = new LocalTransportFactory(SERVER_NODE_ID);
 
         logger.info("*** Bind Master Services");
+
+        ServerNode serverNode = factory.getServer();
+
         // bind Master services to server
-        masterAPI = Integration.createSpyMasterAPI(factory.getServer(), REMOTE_SE_PLUGIN_NAME);
+        masterAPI = Integration.createSpyMasterAPI(serverNode, REMOTE_SE_PLUGIN_NAME);
+        serverNode.bindDtoNode(masterAPI);
 
         logger.info("*** Bind Slave Services");
         // bind Slave services to client
-        slaveAPI = Integration.createSpySlaveAPI(factory.getClient(CLIENT_NODE_ID), SERVER_NODE_ID);
-
+        ClientNode clientNode = factory.getClient(CLIENT_NODE_ID);
+        slaveAPI = Integration.createSpySlaveAPI(clientNode, SERVER_NODE_ID);
+        clientNode.bindDtoNode(slaveAPI);
     }
 
     protected void clearMasterNSlave() {

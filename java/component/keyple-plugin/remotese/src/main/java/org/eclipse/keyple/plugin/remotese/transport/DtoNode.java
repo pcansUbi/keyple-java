@@ -12,23 +12,33 @@
 package org.eclipse.keyple.plugin.remotese.transport;
 
 
+import org.eclipse.keyple.plugin.remotese.exception.KeypleRemoteException;
+import org.eclipse.keyple.plugin.remotese.transport.model.KeypleDto;
+import org.eclipse.keyple.plugin.remotese.transport.model.TransportDto;
 
 /**
  * DtoNode is a one-point gateway for incoming and outgoing TransportDto. It extend DtoSender thus
  * sends KeypleDto and contains a DtoHandler for incoming KeypleDto
  */
-public interface DtoNode extends DtoSender {
+public abstract class DtoNode implements DtoSender,DtoHandler {
 
-    /**
-     * Binds a {@link DtoHandler} that will process incoming KeypleDto (usually
-     * {@link org.eclipse.keyple.plugin.remotese.pluginse.MasterAPI} or
-     * {@link org.eclipse.keyple.plugin.remotese.nativese.SlaveAPI})
-     * 
-     * @param handler : set the handler that will process incoming
-     *        {@link org.eclipse.keyple.plugin.remotese.transport.model.KeypleDto}, usually
-     *        {@link org.eclipse.keyple.plugin.remotese.pluginse.MasterAPI} or
-     *        {@link org.eclipse.keyple.plugin.remotese.nativese.SlaveAPI}
-     */
-    void setDtoHandler(DtoHandler handler);
+    protected DtoSender dtoSender;
 
+    public DtoNode(DtoSender dtoSender){
+        this.dtoSender = dtoSender;
+    }
+
+    public void sendDTO(KeypleDto message) throws KeypleRemoteException {
+        this.dtoSender.sendDTO(message);
+    }
+
+    public void sendDTO(TransportDto message) throws KeypleRemoteException {
+        this.dtoSender.sendDTO(message);
+    }
+
+    public abstract TransportDto onDTO(TransportDto message);
+
+    public String getNodeId(){
+        return dtoSender.getNodeId();
+    };
 }

@@ -142,7 +142,8 @@ class WskServer extends WebSocketServer implements ServerNode {
         return nativeReaderName_session.put(nativeReaderName + clientNodeId, connection);
     }
 
-    public void setDtoHandler(DtoHandler dtoHandler) {
+    @Override
+    public void bindDtoNode(DtoNode dtoHandler) {
         this.dtoHandler = dtoHandler;
     }
 

@@ -21,8 +21,7 @@ import org.eclipse.keyple.core.seproxy.protocol.TransmissionMode;
 import org.eclipse.keyple.plugin.remotese.exception.KeypleRemoteException;
 import org.eclipse.keyple.plugin.remotese.nativese.SlaveAPI;
 import org.eclipse.keyple.plugin.remotese.pluginse.MasterAPI;
-import org.eclipse.keyple.plugin.remotese.transport.DtoHandler;
-import org.eclipse.keyple.plugin.remotese.transport.DtoNode;
+import org.eclipse.keyple.plugin.remotese.transport.DtoSender;
 import org.eclipse.keyple.plugin.remotese.transport.impl.java.LocalTransportDto;
 import org.eclipse.keyple.plugin.remotese.transport.model.KeypleDto;
 import org.eclipse.keyple.plugin.remotese.transport.model.KeypleDtoHelper;
@@ -47,7 +46,7 @@ public class Integration {
      * @param node
      * @return
      */
-    public static MasterAPI createSpyMasterAPI(DtoNode node, String pluginName)
+    public static MasterAPI createSpyMasterAPI(DtoSender node, String pluginName)
             throws KeyplePluginInstantiationException {
 
         // Create Master services : masterAPI
@@ -61,7 +60,7 @@ public class Integration {
      * @param node
      * @return
      */
-    public static SlaveAPI createSpySlaveAPI(DtoNode node, String masterNodeId) {
+    public static SlaveAPI createSpySlaveAPI(DtoSender node, String masterNodeId) {
         // Binds node for outgoing KeypleDto
         return Mockito.spy(new SlaveAPI(SeProxyService.getInstance(), node, masterNodeId));
     }
@@ -175,12 +174,8 @@ public class Integration {
         };
     }
 
-    public static DtoNode getFakeDtoNode() {
-        return new DtoNode() {
-            @Override
-            public void setDtoHandler(DtoHandler handler) {
-
-            }
+    public static DtoSender getFakeDtoNode() {
+        return new DtoSender() {
 
             @Override
             public void sendDTO(TransportDto message) throws KeypleRemoteException {

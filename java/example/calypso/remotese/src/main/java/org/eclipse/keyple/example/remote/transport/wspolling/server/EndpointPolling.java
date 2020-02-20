@@ -29,13 +29,12 @@ import com.sun.net.httpserver.HttpHandler;
  * Endpoint for polling, used to send keypleDto to polling clients
  */
 
-class EndpointPolling implements HttpHandler, DtoNode {
+class EndpointPolling implements HttpHandler, DtoSender {
 
     private static long TIMEOUT_POLLING = 5000;// ms
 
     private final Logger logger = LoggerFactory.getLogger(EndpointPolling.class);
 
-    private DtoHandler dtoHandler;
     private final String nodeId;
     // private final PublishQueue<KeypleDto> keypleDtoQueue;
     private final PublishQueueManager publishQueueManager;
@@ -92,15 +91,6 @@ class EndpointPolling implements HttpHandler, DtoNode {
 
         }
     }
-
-    /*
-     * DtoNode
-     */
-    @Override
-    public void setDtoHandler(DtoHandler receiver) {
-        this.dtoHandler = receiver;
-    }
-
 
     @Override
     public void sendDTO(TransportDto message) {

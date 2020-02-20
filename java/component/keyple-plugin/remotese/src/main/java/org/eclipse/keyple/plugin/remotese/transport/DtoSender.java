@@ -22,7 +22,7 @@ import org.eclipse.keyple.plugin.remotese.transport.model.TransportDto;
 public interface DtoSender {
 
     /**
-     * Send DTO with common information
+     * Send DTO with transport information
      * 
      * @param message to be sent
      * @throws KeypleRemoteException if a problem occurs while sending the message

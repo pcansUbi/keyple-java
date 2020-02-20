@@ -45,7 +45,7 @@ public class WsPRetrofitClientImpl extends Observable implements ClientNode {
     private Boolean isPolling;
     private ClientNode.ConnectCallback connectCallback;
 
-    private DtoHandler dtoHandler;
+    private DtoHandler dtoNode;
 
 
     public WsPRetrofitClientImpl(String baseUrl, String clientNodeId, String serverNodeId) {
@@ -72,7 +72,7 @@ public class WsPRetrofitClientImpl extends Observable implements ClientNode {
      * 
      * @param clientNodeId
      */
-    private void poll(final String clientNodeId) {
+    void poll(final String clientNodeId) {
         logger.trace("Polling from node {}", clientNodeId);
         final WsPRetrofitClientImpl thisClient = this;
         // if poll is activated
@@ -173,7 +173,7 @@ public class WsPRetrofitClientImpl extends Observable implements ClientNode {
         if (!KeypleDtoHelper.isNoResponse(responseDTO)) {
             TransportDto transportDto = new WsPTransportDTO(responseDTO, this);
             // connection
-            final TransportDto sendback = this.dtoHandler.onDTO(transportDto);
+            final TransportDto sendback = this.dtoNode.onDTO(transportDto);
 
             // if sendBack is not a noresponse (can be a keyple request or keyple response)
             if (!KeypleDtoHelper.isNoResponse(sendback.getKeypleDTO())) {
@@ -237,12 +237,9 @@ public class WsPRetrofitClientImpl extends Observable implements ClientNode {
         return this.serverNodeId;
     }
 
-    /*
-     * DtoNode
-     */
     @Override
-    public void setDtoHandler(DtoHandler dtoHandler) {
-        this.dtoHandler = dtoHandler;
+    public void bindDtoNode(DtoNode dtoNode) {
+        this.dtoNode = dtoNode;
     }
 
 

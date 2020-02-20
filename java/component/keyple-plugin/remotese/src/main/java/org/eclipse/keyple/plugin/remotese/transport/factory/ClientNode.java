@@ -12,36 +12,38 @@
 package org.eclipse.keyple.plugin.remotese.transport.factory;
 
 
+import org.eclipse.keyple.plugin.remotese.transport.DtoHandler;
 import org.eclipse.keyple.plugin.remotese.transport.DtoNode;
+import org.eclipse.keyple.plugin.remotese.transport.DtoSender;
 
 /**
  * Client type of DtoNode, connects to a ServerNode
  */
-public interface ClientNode extends DtoNode {
+public interface ClientNode extends TransportNode {
 
     /**
      * Connect to the server
      * 
      * @param connectCallback callback function
      */
-    void connect(ConnectCallback connectCallback);
+    public abstract void connect(ConnectCallback connectCallback);
 
     /**
      * Disconnect from the server
      */
-    void disconnect();
+    public abstract void disconnect();
 
     /**
      * Retrieve ServerNodeId
      * 
      * @return server node id
      */
-    String getServerNodeId();
+    public abstract String getServerNodeId();
 
     /**
      * Callback on the connection success
      */
-    interface ConnectCallback {
+    public interface ConnectCallback {
         /**
          * Called if the connection is sucessful
          */

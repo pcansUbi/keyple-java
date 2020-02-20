@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 public class WskClient extends WebSocketClient implements ClientNode {
 
     private static final Logger logger = LoggerFactory.getLogger(WskClient.class);
-    private DtoHandler dtoHandler;
+    private DtoHandler dtoNode;
     private final String clientNodeId;
     final private String serverNodeId;
 
@@ -58,7 +58,7 @@ public class WskClient extends WebSocketClient implements ClientNode {
                 KeypleDto dto = KeypleDtoHelper.fromJson(message);
 
                 // process dto
-                TransportDto transportDto = dtoHandler.onDTO(new WskTransportDTO(dto, null));
+                TransportDto transportDto = dtoNode.onDTO(new WskTransportDTO(dto, null));
 
                 // there is a response/request to send back
                 if (!KeypleDtoHelper.isNoResponse(transportDto.getKeypleDTO())) {
@@ -109,8 +109,8 @@ public class WskClient extends WebSocketClient implements ClientNode {
     }
 
     @Override
-    public void setDtoHandler(DtoHandler receiver) {
-        this.dtoHandler = receiver;
+    public void bindDtoNode(DtoNode dtoNode) {
+        this.dtoNode = dtoNode;
     }
 
     @Override

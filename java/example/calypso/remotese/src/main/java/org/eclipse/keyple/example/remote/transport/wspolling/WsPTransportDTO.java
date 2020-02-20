@@ -19,7 +19,7 @@ public class WsPTransportDTO implements TransportDto {
 
 
     final private KeypleDto dto;
-    final private DtoSender node;
+    final private DtoSender node;//TODO : not sure if necessary
 
     public WsPTransportDTO(KeypleDto dto, DtoSender node) {
         this.dto = dto;
@@ -33,6 +33,7 @@ public class WsPTransportDTO implements TransportDto {
 
     @Override
     public TransportDto nextTransportDTO(KeypleDto keypleDto) {
+
         return new WsPTransportDTO(keypleDto, node);
     }
 

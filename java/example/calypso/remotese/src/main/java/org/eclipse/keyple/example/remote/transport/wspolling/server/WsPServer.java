@@ -28,11 +28,9 @@ import com.sun.net.httpserver.HttpServer;
  * <p>
  * Sending {@link KeypleDto} to clients is achieve by a polling mechanism held by the web service
  * client (see
- * {@link org.eclipse.keyple.example.remote.transport.wspolling.client_retrofit.WsPRetrofitClientImpl#poll(String)}
+ * {@link org.eclipse.keyple.example.remote.transport.wspolling.client_retrofit.WsPRetrofitClientImpl#(String)}
  */
 public class WsPServer implements ServerNode {
-
-
 
     private InetSocketAddress inet;
     final private String apiUrl;
@@ -93,8 +91,8 @@ public class WsPServer implements ServerNode {
      * DtoNode
      */
     @Override
-    public void setDtoHandler(DtoHandler receiver) {
-        ((EndpointKeypleDTO) this.keypleDTOEndpoint).setDtoHandler(receiver);
+    public void bindDtoNode(DtoNode receiver) {
+        ((EndpointKeypleDTO) this.keypleDTOEndpoint).bindDtoNode(receiver);
     }
 
     @Override

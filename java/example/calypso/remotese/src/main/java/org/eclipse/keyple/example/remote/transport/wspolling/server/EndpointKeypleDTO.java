@@ -30,7 +30,7 @@ import com.sun.net.httpserver.HttpHandler;
 /**
  * Endpoint for receiving KeypleDTO from clients
  */
-class EndpointKeypleDTO implements HttpHandler, DtoNode {
+class EndpointKeypleDTO implements HttpHandler {
 
 
     private final Logger logger = LoggerFactory.getLogger(EndpointKeypleDTO.class);
@@ -68,27 +68,10 @@ class EndpointKeypleDTO implements HttpHandler, DtoNode {
     /*
      * DtoNode
      */
-    @Override
-    public void setDtoHandler(DtoHandler receiver) {
+    public void bindDtoNode(DtoNode receiver) {
         this.dtoHandler = receiver;
     }
 
-
-    @Override
-    public void sendDTO(TransportDto message) {
-        logger.warn("Send DTO can not be used in Web Service DemoMaster");
-        // not in use, one way communication, server do not send message
-    }
-
-    @Override
-    public void sendDTO(KeypleDto message) {
-        logger.warn("Send DTO can not be used in Web Service DemoMaster");
-    }
-
-    @Override
-    public String getNodeId() {
-        return this.nodeId;
-    }
 
 
     private void setHttpResponse(HttpExchange t, KeypleDto resp) throws IOException {

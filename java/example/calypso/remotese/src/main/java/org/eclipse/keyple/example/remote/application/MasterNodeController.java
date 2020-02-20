@@ -27,9 +27,11 @@ import org.eclipse.keyple.plugin.remotese.pluginse.MasterAPI;
 import org.eclipse.keyple.plugin.remotese.pluginse.RemoteSePlugin;
 import org.eclipse.keyple.plugin.remotese.pluginse.VirtualReader;
 import org.eclipse.keyple.plugin.remotese.transport.DtoNode;
+import org.eclipse.keyple.plugin.remotese.transport.DtoSender;
 import org.eclipse.keyple.plugin.remotese.transport.factory.ClientNode;
 import org.eclipse.keyple.plugin.remotese.transport.factory.ServerNode;
 import org.eclipse.keyple.plugin.remotese.transport.factory.TransportFactory;
+import org.eclipse.keyple.plugin.remotese.transport.factory.TransportNode;
 import org.eclipse.keyple.plugin.stub.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,8 +52,8 @@ public class MasterNodeController {
     // Master API reference
     private MasterAPI masterAPI;
 
-    // DtoNode used as to send and receive KeypleDto to Slaves
-    private DtoNode node;
+    // TransportNode used as to send and receive KeypleDto to Slaves. Can be a http client or server.
+    private TransportNode node;
 
     static public long RPC_TIMEOUT = 20000;
 
@@ -136,7 +138,6 @@ public class MasterNodeController {
             ((StubReader) samReader).insertSe(calypsoSamStubSe);
             logger.info("Stub SAM inserted");
 
-
             /*
              * Configure the RemoteSe Plugin that manages PO Virtual Readers
              */
@@ -146,6 +147,9 @@ public class MasterNodeController {
             // In this case, node is used as the dtosender (can be client or server)
             masterAPI = new MasterAPI(SeProxyService.getInstance(), node, RPC_TIMEOUT,
                     MasterAPI.PLUGIN_TYPE_DEFAULT, REMOTESE_PLUGIN_NAME);
+
+            //bind the masterAPI to receive dto from the TransportNode
+            node.bindDtoNode(masterAPI);
 
             // observe remote se plugin for events
             logger.info("{} Observe SeRemotePlugin for Plugin Events and Reader Events",

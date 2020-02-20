@@ -27,12 +27,16 @@ public class LocalClient implements ClientNode {
 
     private static final Logger logger = LoggerFactory.getLogger(LocalClient.class);
     private final LocalServer theServer;
-    private DtoHandler dtoHandler;
     private final String clientNodeId;
+    protected DtoHandler dtoHandler; //masterAPI or slaveAPI
 
     public LocalClient(String clientNodeId, LocalServer server) {
         this.theServer = server;
         this.clientNodeId = clientNodeId;
+    }
+
+    public void bindDtoNode(DtoNode handler) {
+        this.dtoHandler = handler;
     }
 
     public void onLocalMessage(KeypleDto keypleDto) {
@@ -45,10 +49,10 @@ public class LocalClient implements ClientNode {
         }
     }
 
-    @Override
-    public void setDtoHandler(DtoHandler handler) {
-        this.dtoHandler = handler;
-    }
+    //@Override
+    //public void setDtoHandler(DtoHandler handler) {
+    //    this.dtoHandler = handler;
+    //}
 
     @Override
     public void sendDTO(TransportDto transportDto) {

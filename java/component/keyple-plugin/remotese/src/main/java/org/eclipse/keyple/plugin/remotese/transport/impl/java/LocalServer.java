@@ -29,9 +29,9 @@ public class LocalServer implements ServerNode {
 
     private static final Logger logger = LoggerFactory.getLogger(LocalServer.class);
 
-    private DtoHandler dtoHandler;
     private final String serverNodeId;
     private final Map<String, LocalClient> client_ids;
+    protected DtoHandler dtoNode; //masterAPI or slaveAPI
 
     public LocalServer(String serverNodeId) {
         this.client_ids = new HashMap<String, LocalClient>();
@@ -42,9 +42,9 @@ public class LocalServer implements ServerNode {
         LocalClient theClient = ((LocalTransportDto) transportDto).getTheClient();
         client_ids.put(transportDto.getKeypleDTO().getRequesterNodeId(), theClient);
 
-        if (dtoHandler != null) {
+        if (dtoNode != null) {
             TransportDto response =
-                    dtoHandler.onDTO(new LocalTransportDto(transportDto.getKeypleDTO(), theClient));
+                    dtoNode.onDTO(new LocalTransportDto(transportDto.getKeypleDTO(), theClient));
             // send back response
             this.sendDTO(response);
         } else {
@@ -57,9 +57,8 @@ public class LocalServer implements ServerNode {
         logger.info("Local server start");
     }
 
-    @Override
-    public void setDtoHandler(DtoHandler handler) {
-        this.dtoHandler = handler;
+    public void bindDtoNode(DtoNode handler) {
+        this.dtoNode = handler;
     }
 
     @Override

@@ -25,9 +25,11 @@ import org.eclipse.keyple.core.seproxy.protocol.SeCommonProtocols;
 import org.eclipse.keyple.plugin.remotese.exception.KeypleRemoteException;
 import org.eclipse.keyple.plugin.remotese.nativese.SlaveAPI;
 import org.eclipse.keyple.plugin.remotese.transport.DtoNode;
+import org.eclipse.keyple.plugin.remotese.transport.DtoSender;
 import org.eclipse.keyple.plugin.remotese.transport.factory.ClientNode;
 import org.eclipse.keyple.plugin.remotese.transport.factory.ServerNode;
 import org.eclipse.keyple.plugin.remotese.transport.factory.TransportFactory;
+import org.eclipse.keyple.plugin.remotese.transport.factory.TransportNode;
 import org.eclipse.keyple.plugin.stub.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +47,7 @@ public class SlaveNodeController {
     private StubReader localReader;
 
     // DtoNode used as to send and receive KeypleDto to Master
-    private DtoNode node;
+    private TransportNode node;
 
     // SlaveAPI, used to connect PoReader and disconnect readers
     private SlaveAPI slaveAPI;
@@ -97,6 +99,8 @@ public class SlaveNodeController {
                 slaveAPI =
                         new SlaveAPI(SeProxyService.getInstance(), node, masterNodeId, RPC_TIMEOUT);
 
+                 node.bindDtoNode(slaveAPI);
+
                 initPoReader();
 
             } catch (IOException e) {
@@ -104,12 +108,9 @@ public class SlaveNodeController {
             }
         } else {
 
-
             // Slave is client, connectPoReader to Master Server
             node = transportFactory.getClient(slaveNodeId);
 
-            // slave client uses its clientid to connect to server
-            // slaveNodeId = node.getNodeId();
 
             ((ClientNode) node).connect(new ClientNode.ConnectCallback() {
                 @Override
@@ -123,6 +124,8 @@ public class SlaveNodeController {
             // if slave is client, master is the configured server
             slaveAPI = new SlaveAPI(SeProxyService.getInstance(), node,
                     ((ClientNode) node).getServerNodeId());
+
+            node.bindDtoNode(slaveAPI);
 
             initPoReader();
 
@@ -175,7 +178,7 @@ public class SlaveNodeController {
                     StubProtocolSetting.STUB_PROTOCOL_SETTING
                             .get(SeCommonProtocols.PROTOCOL_ISO14443_4));
 
-            // start se detectino in REPEATING MODE
+            // start SE detection
             localReader.startSeDetection(ObservableReader.PollingMode.REPEATING);
 
         } catch (InterruptedException e) {

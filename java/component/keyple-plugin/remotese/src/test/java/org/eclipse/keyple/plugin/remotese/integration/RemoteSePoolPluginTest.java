@@ -11,13 +11,13 @@
  ********************************************************************************/
 package org.eclipse.keyple.plugin.remotese.integration;
 
-
-
 import org.eclipse.keyple.core.seproxy.SeProxyService;
 import org.eclipse.keyple.core.seproxy.SeReader;
 import org.eclipse.keyple.plugin.remotese.nativese.SlaveAPI;
 import org.eclipse.keyple.plugin.remotese.pluginse.MasterAPI;
 import org.eclipse.keyple.plugin.remotese.pluginse.RemoteSePoolPlugin;
+import org.eclipse.keyple.plugin.remotese.transport.factory.ClientNode;
+import org.eclipse.keyple.plugin.remotese.transport.factory.ServerNode;
 import org.eclipse.keyple.plugin.remotese.transport.impl.java.LocalTransportFactory;
 import org.eclipse.keyple.plugin.stub.StubPoolPlugin;
 import org.eclipse.keyple.plugin.stub.StubSecureElement;
@@ -73,18 +73,21 @@ public class RemoteSePoolPluginTest {
         stubPoolPlugin.plugStubPoolReader(REF_GROUP1, "stub1", stubSe);
 
         // configure Slave with Stub Pool plugin and local server node
+        ServerNode serverNode = factory.getServer();
         slaveAPI = new SlaveAPI(SeProxyService.getInstance(), factory.getServer(), "");
-
         // bind slaveAPI to stubPoolPlugin
         slaveAPI.registerReaderPoolPlugin(stubPoolPlugin);
+        serverNode.bindDtoNode(slaveAPI);
 
         /*
          * Configure master with Remote Pool Plugin
          */
 
+        ClientNode clientNode = factory.getClient(CLIENT_NODE_ID);
         // configure Master with RemoteSe Pool plugin and client node
-        masterAPI = new MasterAPI(SeProxyService.getInstance(), factory.getClient(CLIENT_NODE_ID),
+        masterAPI = new MasterAPI(SeProxyService.getInstance(), clientNode,
                 10000, MasterAPI.PLUGIN_TYPE_POOL, "REMOTESE_POOL_PLUGIN1");
+        clientNode.bindDtoNode(masterAPI);
 
         remoteSePoolPlugin = (RemoteSePoolPlugin) masterAPI.getPlugin();
     }

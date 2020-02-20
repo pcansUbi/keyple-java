@@ -35,11 +35,10 @@ import org.slf4j.LoggerFactory;
  * {@link DtoHandler}.
  *
  */
-public class MasterAPI implements DtoHandler {
+public class MasterAPI extends DtoNode {
 
     private static final Logger logger = LoggerFactory.getLogger(MasterAPI.class);
 
-    private final DtoNode dtoTransportNode;
     private final RemoteSePluginImpl plugin;
 
     static public int PLUGIN_TYPE_DEFAULT = 0;
@@ -54,12 +53,12 @@ public class MasterAPI implements DtoHandler {
      * lifecycle Manages Master Session Dispatch KeypleDTO
      *
      * @param seProxyService : SeProxyService
-     * @param dtoNode : outgoing node to send Dto to Slave
+     * @param dtoSender : outgoing node to send Dto to Slave
      * @throws KeyplePluginInstantiationException if plugin does not instantiate
      */
-    public MasterAPI(SeProxyService seProxyService, DtoNode dtoNode)
+    public MasterAPI(SeProxyService seProxyService, DtoSender dtoSender)
             throws KeyplePluginInstantiationException {
-        this(seProxyService, dtoNode, DEFAULT_RPC_TIMEOUT);
+        this(seProxyService, dtoSender, DEFAULT_RPC_TIMEOUT);
     }
 
     /**
@@ -67,14 +66,14 @@ public class MasterAPI implements DtoHandler {
      * lifecycle Manages Master Session Dispatch KeypleDTO
      *
      * @param seProxyService : SeProxyService
-     * @param dtoNode : outgoing node to send Dto to Slave
+     * @param dtoSender : outgoing node to send Dto to Slave
      * @param rpc_timeout : timeout in milliseconds to wait for an answer from slave before throwing
      *        an exception
      * @throws KeyplePluginInstantiationException if plugin does not instantiate
      */
-    public MasterAPI(SeProxyService seProxyService, DtoNode dtoNode, long rpc_timeout)
+    public MasterAPI(SeProxyService seProxyService, DtoSender dtoSender, long rpc_timeout)
             throws KeyplePluginInstantiationException {
-        this(seProxyService, dtoNode, rpc_timeout, PLUGIN_TYPE_DEFAULT,
+        this(seProxyService, dtoSender, rpc_timeout, PLUGIN_TYPE_DEFAULT,
                 RemoteSePlugin.DEFAULT_PLUGIN_NAME);
     }
 
@@ -83,7 +82,7 @@ public class MasterAPI implements DtoHandler {
      * lifecycle Manages Master Session Dispatch KeypleDTO
      *
      * @param seProxyService : SeProxyService
-     * @param dtoNode : outgoing node to send Dto to Slave
+     * @param dtoSender : outgoing node to send Dto to Slave
      * @param rpcTimeout : timeout in milliseconds to wait for an answer from slave before throwing
      *        an exception
      * @param pluginType : either a default plugin or readerPool plugin, use
@@ -93,14 +92,13 @@ public class MasterAPI implements DtoHandler {
      *
      * 
      */
-    public MasterAPI(SeProxyService seProxyService, DtoNode dtoNode, long rpcTimeout,
+    public MasterAPI(SeProxyService seProxyService, DtoSender dtoSender, long rpcTimeout,
             int pluginType, String pluginName) throws KeyplePluginInstantiationException {
+        super(dtoSender);
 
-        logger.info("Init MasterAPI with parameters {} {} {} {} {}", seProxyService, dtoNode,
+        logger.info("Init MasterAPI with parameters {} {} {} {} {}", seProxyService, dtoSender,
                 rpcTimeout, pluginType, pluginName);
 
-
-        this.dtoTransportNode = dtoNode;
         this.pluginType = pluginType;
 
         if (pluginName == null || pluginName.isEmpty()) {
@@ -123,7 +121,7 @@ public class MasterAPI implements DtoHandler {
                 }
 
                 seProxyService.registerPlugin(
-                        new RemoteSePluginFactory(sessionManager, dtoNode, rpcTimeout, pluginName));
+                        new RemoteSePluginFactory(sessionManager, dtoSender, rpcTimeout, pluginName));
 
                 this.plugin = (RemoteSePluginImpl) seProxyService.getPlugin(pluginName);
 
@@ -137,7 +135,7 @@ public class MasterAPI implements DtoHandler {
                             "plugin name is already registered to the platform : " + pluginName);
                 }
 
-                seProxyService.registerPlugin(new RemoteSePoolPluginFactory(sessionManager, dtoNode,
+                seProxyService.registerPlugin(new RemoteSePoolPluginFactory(sessionManager, dtoSender,
                         rpcTimeout, pluginName));
 
                 this.plugin = (RemoteSePoolPluginImpl) seProxyService.getPlugin(pluginName);
@@ -152,7 +150,7 @@ public class MasterAPI implements DtoHandler {
         }
 
         // Set this service as the Dto Handler for the node
-        this.bindDtoEndpoint(dtoNode);
+        //this.bindDtoEndpoint(dtoNode);
     }
 
     /**
@@ -160,9 +158,9 @@ public class MasterAPI implements DtoHandler {
      * 
      * @param node : incoming Dto point
      */
-    private void bindDtoEndpoint(DtoNode node) {
-        node.setDtoHandler(this);
-    }
+//    private void bindDtoEndpoint(DtoNode node) {
+  //      node.setDtoHandler(this);
+    //}
 
     /**
      * Retrieve the Rse Plugin
@@ -195,7 +193,7 @@ public class MasterAPI implements DtoHandler {
              */
             case READER_CONNECT:
                 if (keypleDTO.isRequest()) {
-                    return new RmConnectReaderExecutor(this.plugin, this.dtoTransportNode)
+                    return new RmConnectReaderExecutor(this.plugin, this.dtoSender)
                             .execute(transportDto);
                 } else {
                     throw new IllegalStateException(
@@ -269,7 +267,6 @@ public class MasterAPI implements DtoHandler {
                 return transportDto.nextTransportDTO(KeypleDtoHelper.NoResponse(keypleDTO.getId()));
         }
     }
-
 
 
     /**
