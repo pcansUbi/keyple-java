@@ -17,8 +17,6 @@ import java.io.IOException;
  * Factory helper for Client/Server protocol implementation. This class holds a configuration and
  * create a server and clients based on this configuration.
  * <p>
- * See {@link org.eclipse.keyple.plugin.remotese.transport.impl.java.LocalTransportFactory} for an
- * example of implementation
  */
 public abstract class TransportFactory {
 

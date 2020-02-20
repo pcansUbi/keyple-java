@@ -17,8 +17,7 @@ import org.eclipse.keyple.plugin.remotese.transport.model.KeypleDto;
 import org.eclipse.keyple.plugin.remotese.transport.model.TransportDto;
 
 /**
- * DtoNode is a one-point gateway for incoming and outgoing TransportDto. It extend DtoSender thus
- * sends KeypleDto and contains a DtoHandler for incoming KeypleDto
+ * DtoNode is the abstract class of SlaveAPI and MasterAPI
  */
 public abstract class DtoNode implements DtoSender,DtoHandler {
 

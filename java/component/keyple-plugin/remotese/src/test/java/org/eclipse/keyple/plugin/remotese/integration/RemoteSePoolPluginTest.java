@@ -18,7 +18,7 @@ import org.eclipse.keyple.plugin.remotese.pluginse.MasterAPI;
 import org.eclipse.keyple.plugin.remotese.pluginse.RemoteSePoolPlugin;
 import org.eclipse.keyple.plugin.remotese.transport.factory.ClientNode;
 import org.eclipse.keyple.plugin.remotese.transport.factory.ServerNode;
-import org.eclipse.keyple.plugin.remotese.transport.impl.java.LocalTransportFactory;
+import local.LocalTransportFactory;
 import org.eclipse.keyple.plugin.stub.StubPoolPlugin;
 import org.eclipse.keyple.plugin.stub.StubSecureElement;
 import org.junit.After;

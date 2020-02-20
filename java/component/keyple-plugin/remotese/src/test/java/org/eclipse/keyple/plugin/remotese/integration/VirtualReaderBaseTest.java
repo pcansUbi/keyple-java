@@ -24,7 +24,7 @@ import org.eclipse.keyple.plugin.remotese.pluginse.VirtualReader;
 import org.eclipse.keyple.plugin.remotese.transport.factory.ClientNode;
 import org.eclipse.keyple.plugin.remotese.transport.factory.ServerNode;
 import org.eclipse.keyple.plugin.remotese.transport.factory.TransportFactory;
-import org.eclipse.keyple.plugin.remotese.transport.impl.java.LocalTransportFactory;
+import local.LocalTransportFactory;
 import org.eclipse.keyple.plugin.stub.*;
 import org.junit.*;
 import org.junit.rules.TestName;

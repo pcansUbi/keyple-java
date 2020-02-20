@@ -17,7 +17,7 @@ import org.eclipse.keyple.plugin.remotese.transport.DtoNode;
 import org.eclipse.keyple.plugin.remotese.transport.DtoSender;
 
 /**
- * Server type of a DtoNode, start and waits for clients to connect
+ * Server type of a TransportNode, start and waits for clients to connect
  */
 public interface ServerNode extends TransportNode {
 

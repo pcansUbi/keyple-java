@@ -4,7 +4,7 @@ import org.eclipse.keyple.plugin.remotese.transport.DtoNode;
 import org.eclipse.keyple.plugin.remotese.transport.DtoSender;
 
 /**
- * Bi-directional node, sends dto and pass them to DtoNode
+ * TransportNode is a component that sends Dto and also is the entry point for incoming dto. It transfer them to the dtoNode.
  */
 public interface TransportNode extends DtoSender {
 
