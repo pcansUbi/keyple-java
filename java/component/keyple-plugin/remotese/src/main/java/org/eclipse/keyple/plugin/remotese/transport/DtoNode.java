@@ -21,23 +21,38 @@ import org.eclipse.keyple.plugin.remotese.transport.model.TransportDto;
  */
 public abstract class DtoNode implements DtoSender,DtoHandler {
 
+    //embedded dtoSender (can be a web client, or any component able to send a Dto)
     protected DtoSender dtoSender;
 
-    public DtoNode(DtoSender dtoSender){
+    /**
+     * Constructor used by SlaveAPI and MasterAPI
+     * @param dtoSender
+     */
+    protected DtoNode(DtoSender dtoSender){
         this.dtoSender = dtoSender;
     }
 
+    /*
+     * From DtoSender
+     */
+    @Override
     public void sendDTO(KeypleDto message) throws KeypleRemoteException {
         this.dtoSender.sendDTO(message);
     }
 
+    @Override
     public void sendDTO(TransportDto message) throws KeypleRemoteException {
         this.dtoSender.sendDTO(message);
     }
 
-    public abstract TransportDto onDTO(TransportDto message);
-
     public String getNodeId(){
         return dtoSender.getNodeId();
     };
+
+    /*
+     * From DtoHandler
+     */
+    public abstract TransportDto onDTO(TransportDto message);
+
+
 }
