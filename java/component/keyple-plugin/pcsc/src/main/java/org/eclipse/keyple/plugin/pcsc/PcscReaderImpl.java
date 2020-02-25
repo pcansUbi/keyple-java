@@ -90,7 +90,7 @@ final class PcscReaderImpl extends AbstractObservableLocalReader
 
         this.stateService = initStateService();
 
-        logger.debug("[{}] constructor => using terminal ", terminal);
+        logger.info("[{}] constructor => using terminal ", terminal);
 
 
         // Using null values to use the standard method for defining default values
@@ -143,13 +143,13 @@ final class PcscReaderImpl extends AbstractObservableLocalReader
     protected void closePhysicalChannel() throws KeypleChannelControlException {
         try {
             if (card != null) {
-                logger.debug("[{}] closePhysicalChannel => closing the channel.", this.getName());
+                logger.trace("[{}] closePhysicalChannel => closing the channel.", this.getName());
 
                 channel = null;
                 card.disconnect(cardReset);
                 card = null;
             } else {
-                logger.debug("[{}] closePhysicalChannel => card object is null.", this.getName());
+                logger.trace("[{}] closePhysicalChannel => card object is null.", this.getName());
 
             }
         } catch (CardException e) {
@@ -162,7 +162,7 @@ final class PcscReaderImpl extends AbstractObservableLocalReader
         try {
             return terminal.isCardPresent();
         } catch (CardException e) {
-            logger.debug("[{}] Exception occurred in isSePresent. Message: {}", this.getName(),
+            logger.trace("[{}] Exception occurred in isSePresent. Message: {}", this.getName(),
                     e.getMessage());
             throw new KeypleIOReaderException("Exception occurred in isSePresent", e);
         }
@@ -173,7 +173,7 @@ final class PcscReaderImpl extends AbstractObservableLocalReader
      */
     @Override
     public boolean waitForCardPresent() throws KeypleIOReaderException {
-        logger.debug("[{}] waitForCardPresent => loop with latency of {} ms.", this.getName(),
+        logger.trace("[{}] waitForCardPresent => loop with latency of {} ms.", this.getName(),
                 insertLatency);
 
         // activate loop
@@ -189,7 +189,7 @@ final class PcscReaderImpl extends AbstractObservableLocalReader
                     return true;
                 } else {
                     if (Thread.interrupted()) {
-                        logger.debug("[{}] waitForCardPresent => task has been cancelled",
+                        logger.trace("[{}] waitForCardPresent => task has been cancelled",
                                 this.getName());
                         // task has been cancelled
                         return false;
@@ -204,7 +204,7 @@ final class PcscReaderImpl extends AbstractObservableLocalReader
                             + "Message: " + e.getMessage());
         } catch (Throwable t) {
             // can or can not happen depending on terminal.waitForCardPresent
-            logger.debug("[{}] waitForCardPresent => Throwable catched {}", this.getName(),
+            logger.trace("[{}] waitForCardPresent => Throwable catched {}", this.getName(),
                     t.getCause());
             return false;
         }
@@ -227,7 +227,7 @@ final class PcscReaderImpl extends AbstractObservableLocalReader
      */
     @Override
     public boolean waitForCardAbsentNative() throws KeypleIOReaderException {
-        logger.debug("[{}] waitForCardAbsentNative => loop with latency of {} ms.", this.getName(),
+        logger.trace("[{}] waitForCardAbsentNative => loop with latency of {} ms.", this.getName(),
                 removalLatency);
 
         loopWaitSeRemoval.set(true);
@@ -242,7 +242,7 @@ final class PcscReaderImpl extends AbstractObservableLocalReader
                     return true;
                 } else {
                     if (Thread.interrupted()) {
-                        logger.debug("[{}] waitForCardAbsentNative => task has been cancelled",
+                        logger.trace("[{}] waitForCardAbsentNative => task has been cancelled",
                                 this.getName());
                         // task has been cancelled
                         return false;
@@ -256,7 +256,7 @@ final class PcscReaderImpl extends AbstractObservableLocalReader
                             + "Message: " + e.getMessage());
         } catch (Throwable t) {
             // can or can not happen depending on terminal.waitForCardAbsent
-            logger.debug("[{}] waitForCardAbsentNative => Throwable catched {}", this.getName(),
+            logger.trace("[{}] waitForCardAbsentNative => Throwable catched {}", this.getName(),
                     t.getCause());
             return false;
         }
@@ -381,7 +381,7 @@ final class PcscReaderImpl extends AbstractObservableLocalReader
     public void setParameter(String name, String value)
             throws IllegalArgumentException, KeypleBaseException {
 
-        logger.debug("[{}] setParameter => PCSC: Set a parameter. NAME = {}, VALUE = {}",
+        logger.trace("[{}] setParameter => PCSC: Set a parameter. NAME = {}, VALUE = {}",
                 this.getName(), name, value);
 
         if (name == null) {
